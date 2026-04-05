@@ -36,12 +36,21 @@ html,body,[data-testid="stAppViewContainer"]{background:var(--bg)!important;colo
 
 
 def sb(tabla, params="", limit=100):
-    if not SUPABASE_URL or not SUPABASE_KEY: return []
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        st.error(f"Supabase vars missing: URL={bool(SUPABASE_URL)} KEY={bool(SUPABASE_KEY)}")
+        return []
     try:
-        r = httpx.get(f"{SUPABASE_URL.strip()}/rest/v1/{tabla}?{params}&limit={limit}",
-            headers={"apikey":SUPABASE_KEY.strip(),"Authorization":f"Bearer {SUPABASE_KEY.strip()}"},timeout=15)
-        return r.json() if r.status_code==200 else []
-    except: return []
+        url = SUPABASE_URL.strip().replace(chr(10),"").replace(chr(13),"")
+        key = SUPABASE_KEY.strip().replace(chr(10),"").replace(chr(13),"")
+        r = httpx.get(f"{url}/rest/v1/{tabla}?{params}&limit={limit}",
+            headers={"apikey":key,"Authorization":"Bearer "+key},timeout=15)
+        if r.status_code != 200:
+            st.error(f"Supabase {tabla}: HTTP {r.status_code} - {r.text[:100]}")
+            return []
+        return r.json()
+    except Exception as e:
+        st.error(f"Supabase {tabla} error: {e}")
+        return []
 
 def pj(v):
     if isinstance(v,dict): return v
