@@ -69,7 +69,7 @@ def badge(p):
 if not st.session_state.session_id:
     st.session_state.session_id=nueva_sesion()
 
-st.markdown('<div class="oh"><h1 class="ot">ONTOMIND</h1><p class="os">Coaching Ontologico · Echeverria · Pinotti</p></div>',unsafe_allow_html=True)
+st.markdown('<div class="oh"><h1 class="ot">ONTOMIND</h1><p class="os">Coaching Ontologico</p></div>',unsafe_allow_html=True)
 st.markdown(f'<div class="si">sesion {st.session_state.session_id[:8]}... · turno {st.session_state.turno}</div>',unsafe_allow_html=True)
 
 if not st.session_state.mensajes:

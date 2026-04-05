@@ -17,7 +17,7 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:wght@400&display=swap');
 :root{--bg:#0a0c10;--s:#12151c;--b:#232840;--a:#4a7fc1;--w:#c17a4a;--d:#c14a4a;--ok:#4ac17a;--t:#cdd3e0;--dim:#5a6280;}
-html,body,[data-testid="stAppViewContainer"]{background:var(--bg)!important;color:var(--t)!important;font-family:'DM Mono',monospace!important;font-size:13px!important;}
+html,body,[data-testid="stAppViewContainer"]{background:var(--bg)!important;color:var(--t)!important;font-family:'DM Mono',monospace!important;font-size:15px!important;}
 [data-testid="stHeader"]{display:none;}
 [data-testid="stSidebar"]{background:var(--s)!important;border-right:1px solid var(--b)!important;}
 .mc{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:1.1rem;text-align:center;margin-bottom:0.5rem;}
@@ -146,7 +146,7 @@ elif vista == "Log de Nodos":
                 c1,c2=st.columns(2)
                 with c1:
                     actos=pj(log.get("reporte_actos"))
-                    st.markdown('<div class="nc"><div class="nt">E-ACTOS</div>',unsafe_allow_html=True)
+                    st.markdown('<div class="nc"><div class="nt">ACTOS LINGUISTICOS</div>',unsafe_allow_html=True)
                     if actos:
                         conf=actos.get("confianza",0)
                         st.markdown(f'<span class="nk">Acto:</span> <span class="nv">{actos.get("acto_dominante","—")}</span><br>'
@@ -156,7 +156,7 @@ elif vista == "Log de Nodos":
                     st.markdown('</div>',unsafe_allow_html=True)
                 with c2:
                     juicios=pj(log.get("reporte_juicios"))
-                    st.markdown('<div class="nc"><div class="nt">E-JUICIOS</div>',unsafe_allow_html=True)
+                    st.markdown('<div class="nc"><div class="nt">JUICIOS Y AFIRMACIONES</div>',unsafe_allow_html=True)
                     if juicios:
                         conf=juicios.get("confianza",0)
                         st.markdown(f'<span class="nk">Tipo:</span> <span class="nv">{juicios.get("tipo_enunciado","—")}</span><br>'
@@ -167,7 +167,7 @@ elif vista == "Log de Nodos":
                 c3,c4=st.columns(2)
                 with c3:
                     q=pj(log.get("reporte_quiebre"))
-                    st.markdown('<div class="nc"><div class="nt">P-QUIEBRE</div>',unsafe_allow_html=True)
+                    st.markdown('<div class="nc"><div class="nt">QUIEBRE ONTOLOGICO</div>',unsafe_allow_html=True)
                     if q:
                         conf=q.get("confianza",0)
                         st.markdown(f'<span class="nk">Tipo:</span> <span class="nv">{q.get("tipo_quiebre","—")}</span><br>'
@@ -178,7 +178,7 @@ elif vista == "Log de Nodos":
                     st.markdown('</div>',unsafe_allow_html=True)
                 with c4:
                     v=pj(log.get("reporte_victima"))
-                    st.markdown('<div class="nc"><div class="nt">P-VICTIMA</div>',unsafe_allow_html=True)
+                    st.markdown('<div class="nc"><div class="nt">PROTAGONISMO / VICTIMA</div>',unsafe_allow_html=True)
                     if v:
                         conf=v.get("confianza",0); pos=v.get("posicion","—")
                         tv=", ".join(v.get("tokens_victima",[]) or [])
