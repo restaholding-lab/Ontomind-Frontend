@@ -36,20 +36,17 @@ html,body,[data-testid="stAppViewContainer"]{background:var(--bg)!important;colo
 
 
 def sb(tabla, params="", limit=100):
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        st.error(f"Supabase vars missing: URL={bool(SUPABASE_URL)} KEY={bool(SUPABASE_KEY)}")
-        return []
+    # Usar el backend como proxy — Railway bloquea conexiones directas a Supabase desde el frontend
     try:
-        url = SUPABASE_URL.strip().replace(chr(10),"").replace(chr(13),"")
-        key = SUPABASE_KEY.strip().replace(chr(10),"").replace(chr(13),"")
-        r = httpx.get(f"{url}/rest/v1/{tabla}?{params}&limit={limit}",
-            headers={"apikey":key,"Authorization":"Bearer "+key},timeout=15)
-        if r.status_code != 200:
-            st.error(f"Supabase {tabla}: HTTP {r.status_code} - {r.text[:100]}")
-            return []
-        return r.json()
+        url = f"{API_URL}/admin/tabla/{tabla}?limit={limit}"
+        if params:
+            url += "&params=" + params
+        r = httpx.get(url, timeout=15)
+        if r.status_code == 200:
+            return r.json()
+        return []
     except Exception as e:
-        st.error(f"Supabase {tabla} error: {e}")
+        st.error(f"Error cargando {tabla}: {e}")
         return []
 
 def pj(v):
