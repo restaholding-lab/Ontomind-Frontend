@@ -40,10 +40,15 @@ def sb(tabla, params="", limit=100):
     try:
         url = f"{API_URL}/admin/tabla/{tabla}?limit={limit}"
         if params:
-            url += "&params=" + params
+            import urllib.parse
+            url += "&params=" + urllib.parse.quote(params)
         r = httpx.get(url, timeout=15)
         if r.status_code == 200:
-            return r.json()
+            data = r.json()
+            # Asegurar que siempre devolvemos lista de dicts
+            if isinstance(data, list):
+                return [item if isinstance(item, dict) else {} for item in data]
+            return []
         return []
     except Exception as e:
         st.error(f"Error cargando {tabla}: {e}")
