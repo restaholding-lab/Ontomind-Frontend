@@ -116,6 +116,12 @@ if vista == "Resumen":
         ca,cb=st.columns(2)
         with ca:
             for p,n in protos.items(): st.markdown(f'`{p}` — {n} ({round(n/len(logs)*100)}%)')
+        # Score medio de recompensa
+        scores = [pj(l.get("evaluacion",{})).get("score_total",0) for l in logs if l.get("evaluacion")]
+        if scores:
+            avg = round(sum(scores)/len(scores),1)
+            sc = "#4ac17a" if avg>=30 else "#c17a4a" if avg>=20 else "#c14a4a"
+            st.markdown(f'Score medio recompensa: <span style="color:{sc};font-weight:600">{avg}/40</span>', unsafe_allow_html=True)
         with cb:
             for lm,n in sorted(llaves.items(),key=lambda x:-x[1])[:6]: st.markdown(f'`{lm}` — {n}x')
     else:
@@ -205,6 +211,30 @@ elif vista == "Log de Nodos":
                                f'</div>',unsafe_allow_html=True)
                 st.markdown("**Respuesta generada**")
                 st.markdown(f'<div class="re-box">{log.get("respuesta","")}</div>',unsafe_allow_html=True)
+
+                # Metricas de Recompensa Antropologica
+                ev = pj(log.get("evaluacion"))
+                if ev:
+                    score = ev.get("score_total", 0)
+                    arrog = ev.get("arrogancia_intelectual", False)
+                    score_color = "#4ac17a" if score >= 30 else "#c17a4a" if score >= 20 else "#c14a4a"
+                    st.markdown("**Evaluación de Recompensa Antropológica**")
+                    ec1,ec2,ec3,ec4,ec5 = st.columns(5)
+                    for col, label, val in [
+                        (ec1,"Persistencia", ev.get("persistencia",0)),
+                        (ec2,"Escucha Sombras", ev.get("escucha_sombras",0)),
+                        (ec3,"Voz Supervivencia", ev.get("voz_supervivencia",0)),
+                        (ec4,"→ Declaración", ev.get("hacia_declaracion",0)),
+                        (ec5,"SCORE", score),
+                    ]:
+                        c = "#4ac17a" if val>=7 else "#c17a4a" if val>=4 else "#c14a4a"
+                        with col:
+                            st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.4rem;font-weight:600;color:{c}">{val}</div><div class="nk" style="font-size:0.55rem">{label}</div></div>', unsafe_allow_html=True)
+                    if arrog:
+                        st.markdown('<div style="color:#c14a4a;font-size:0.65rem;margin-top:0.3rem;">⚠ PENALIZACIÓN: Arrogancia Intelectual detectada (-10)</div>', unsafe_allow_html=True)
+                    nota = ev.get("nota_evaluador","")
+                    if nota:
+                        st.markdown(f'<div style="font-size:0.75rem;color:#7a7a84;font-style:italic;margin-top:0.3rem;">{nota}</div>', unsafe_allow_html=True)
 
 
 elif vista == "Alertas VIGIL":
