@@ -36,16 +36,16 @@ html,body,[data-testid="stAppViewContainer"]{background:var(--bg)!important;colo
 
 
 def sb(tabla, params="", limit=100):
-    # Usar el backend como proxy — Railway bloquea conexiones directas a Supabase desde el frontend
+    import urllib.parse, time
     try:
-        url = f"{API_URL}/admin/tabla/{tabla}?limit={limit}"
+        # Añadir timestamp para evitar cache
+        ts = int(time.time())
+        url = f"{API_URL}/admin/tabla/{tabla}?limit={limit}&_ts={ts}"
         if params:
-            import urllib.parse
             url += "&params=" + urllib.parse.quote(params)
         r = httpx.get(url, timeout=15)
         if r.status_code == 200:
             data = r.json()
-            # Asegurar que siempre devolvemos lista de dicts
             if isinstance(data, list):
                 return [item if isinstance(item, dict) else {} for item in data]
             return []
