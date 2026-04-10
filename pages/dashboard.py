@@ -220,18 +220,20 @@ elif vista == "Log de Nodos":
                     score_color = "#4ac17a" if score >= 30 else "#c17a4a" if score >= 20 else "#c14a4a"
                     st.markdown("**Evaluación de Recompensa Antropológica**")
                     ec1,ec2,ec3,ec4,ec5 = st.columns(5)
-                    for col, label, val in [
-                        (ec1,"Persistencia", ev.get("persistencia",0)),
-                        (ec2,"Escucha Sombras", ev.get("escucha_sombras",0)),
-                        (ec3,"Voz Supervivencia", ev.get("voz_supervivencia",0)),
-                        (ec4,"→ Declaración", ev.get("hacia_declaracion",0)),
-                        (ec5,"SCORE", score),
-                    ]:
-                        c = "#4ac17a" if val>=7 else "#c17a4a" if val>=4 else "#c14a4a"
+                    metrics_def = [
+                        (ec1,"Escucha Sombras", ev.get("escucha_sombras",0), 15),
+                        (ec2,"Voz Supervivencia", ev.get("voz_supervivencia",0), 10),
+                        (ec3,"Persistencia", ev.get("persistencia",0), 10),
+                        (ec4,"→ Declaración", ev.get("hacia_declaracion",0), 5),
+                        (ec5,"SCORE /40", score, 40),
+                    ]
+                    for col, label, val, max_v in metrics_def:
+                        pct = val/max_v if max_v > 0 else 0
+                        c = "#4ac17a" if pct>=0.7 else "#c17a4a" if pct>=0.4 else "#c14a4a"
                         with col:
-                            st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.4rem;font-weight:600;color:{c}">{val}</div><div class="nk" style="font-size:0.55rem">{label}</div></div>', unsafe_allow_html=True)
+                            st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.4rem;font-weight:600;color:{c}">{val}<span style="font-size:0.6rem;color:#5a6280">/{max_v}</span></div><div class="nk" style="font-size:0.55rem">{label}</div></div>', unsafe_allow_html=True)
                     if arrog:
-                        st.markdown('<div style="color:#c14a4a;font-size:0.65rem;margin-top:0.3rem;">⚠ PENALIZACIÓN: Arrogancia Intelectual detectada (-10)</div>', unsafe_allow_html=True)
+                        st.markdown('<div style="color:#c14a4a;font-size:0.65rem;margin-top:0.3rem;">⚠ PENALIZACIÓN: Arrogancia Intelectual detectada (-20)</div>', unsafe_allow_html=True)
                     nota = ev.get("nota_evaluador","")
                     if nota:
                         st.markdown(f'<div style="font-size:0.75rem;color:#7a7a84;font-style:italic;margin-top:0.3rem;">{nota}</div>', unsafe_allow_html=True)
