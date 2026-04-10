@@ -87,7 +87,7 @@ with st.sidebar:
     vista = st.radio("Vista", ["Resumen","Log de Nodos","Alertas VIGIL","Sesiones","Consultar sesion"],
                      label_visibility="collapsed")
     st.markdown("---")
-    if st.button("Actualizar"): st.rerun()
+    if st.button("Actualizar", type="primary"): st.cache_data.clear(); st.rerun()
     ok=api_ok()
     st.markdown(f'<div style="margin-top:1.5rem;font-size:0.55rem;color:#3a4060;">API: {"● ACTIVA" if ok else "● INACTIVA"}</div>',unsafe_allow_html=True)
 
