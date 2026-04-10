@@ -266,7 +266,7 @@ elif vista == "Usuarios":
                 if ultima_recom:
                     st.markdown(f'<div style="background:#1a1a2a;border-left:3px solid #4a7fc1;border-radius:0 6px 6px 0;padding:0.7rem 1rem;margin-top:0.8rem;font-size:0.8rem;color:#9a9eb0;font-style:italic;">Proxima sesion: {ultima_recom}</div>', unsafe_allow_html=True)
 
-elif vista == "Conversaciones":elif vista == "Conversaciones":
+elif vista == "Conversaciones":
     st.markdown("### Conversaciones — Arco de Transformación")
     st.markdown('<div style="font-size:0.7rem;color:#5a6280;margin-bottom:1rem;line-height:1.6;">Evaluación del arco completo de cada conversación. Score 0-100 según el Eje de Transformación del observador.<br>0=Supervivencia · 20=Conciencia · 40=Transición · 60=Protagonismo · 80=Transformación</div>', unsafe_allow_html=True)
 
