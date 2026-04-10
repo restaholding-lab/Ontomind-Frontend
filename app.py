@@ -47,7 +47,7 @@ div[data-testid="stButton"]:last-child button{border-color:#363640!important;col
 div[data-testid="stButton"]:last-child button:hover{background:#363640!important;color:#f0ece4!important;}
 </style>""", unsafe_allow_html=True)
 
-for k,v in [("session_id",None),("mensajes",[]),("turno",0),("input_key",0)]:
+for k,v in [("session_id",None),("mensajes",[]),("turno",0),("input_key",0),("user_code","")]:
     if k not in st.session_state: st.session_state[k]=v
 
 def nueva_sesion():
@@ -56,15 +56,31 @@ def nueva_sesion():
         return r.json().get("session_id")
     except: return str(uuid.uuid4())
 
-def chat(session_id,msg):
+def chat(session_id,msg,user_code="anonimo"):
     try:
-        r=httpx.post(f"{API_URL}/chat",json={"session_id":session_id,"mensaje":msg},timeout=120)
+        r=httpx.post(f"{API_URL}/chat",json={"session_id":session_id,"mensaje":msg,"user_code":user_code or "anonimo"},timeout=120)
         return r.json() if r.status_code==200 else {"respuesta":"Error de conexion.","protocolo":"error"}
     except Exception as e: return {"respuesta":f"Error: {e}","protocolo":"error"}
 
 def badge(p):
     m={"normal":"pn","silencio":"ps","incoherencia":"pi","vigil":"pv"}
     return f'<span class="pb {m.get(p,"pn")}">{p}</span>'
+
+# User code input in sidebar
+with st.sidebar:
+    st.markdown('<div style="font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#c8a97e;margin-bottom:0.5rem;">Codigo de usuario</div>', unsafe_allow_html=True)
+    user_code_input = st.text_input("codigo", label_visibility="collapsed",
+        placeholder="ej: JAVIER-01",
+        value=st.session_state.user_code,
+        key="user_code_input")
+    if user_code_input != st.session_state.user_code:
+        st.session_state.user_code = user_code_input.strip().upper()
+    if st.session_state.user_code:
+        st.markdown(f'<div style="font-size:0.6rem;color:#4ac17a;margin-top:0.3rem;">● {st.session_state.user_code}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div style="font-size:0.6rem;color:#7a7570;margin-top:0.3rem;">Sin identificar</div>', unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown('<div style="font-size:0.55rem;color:#5a5550;line-height:1.5;">El codigo te permite que ONTOMIND recuerde tu historial entre sesiones.</div>', unsafe_allow_html=True)
 
 if not st.session_state.session_id:
     st.session_state.session_id=nueva_sesion()
@@ -109,7 +125,7 @@ with c2:
 if enviar and mensaje and mensaje.strip():
     t=mensaje.strip()
     st.session_state.mensajes.append({"rol":"user","contenido":t})
-    with st.spinner(""): res=chat(st.session_state.session_id,t)
+    with st.spinner(""): res=chat(st.session_state.session_id,t,st.session_state.user_code)
     st.session_state.mensajes.append({"rol":"agent","contenido":res.get("respuesta",""),"protocolo":res.get("protocolo","normal")})
     st.session_state.turno=res.get("turno",st.session_state.turno+1)
     st.session_state.input_key+=1
