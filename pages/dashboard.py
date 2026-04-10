@@ -84,7 +84,7 @@ def api_ok():
 with st.sidebar:
     st.markdown("**◈ ONTOMIND**")
     st.markdown("---")
-    vista = st.radio("Vista", ["Resumen","Conversaciones","Log de Nodos","Alertas VIGIL","Sesiones","Consultar sesion"],
+    vista = st.radio("Vista", ["Resumen","Usuarios","Conversaciones","Log de Nodos","Alertas VIGIL","Sesiones","Consultar sesion"],
                      label_visibility="collapsed")
     st.markdown("---")
     if st.button("Actualizar", type="primary"): st.cache_data.clear(); st.rerun()
@@ -135,7 +135,138 @@ if vista == "Resumen":
         st.info("Aun no hay sesiones. Los datos apareceran cuando los usuarios interactuen con ONTOMIND.")
 
 
-elif vista == "Conversaciones":
+elif vista == "Usuarios":
+    st.markdown("### Usuarios — Historial Multi-Conversación")
+    st.markdown('<div style="font-size:0.7rem;color:#5a6280;margin-bottom:1.2rem;line-height:1.6;">Evolución longitudinal de cada usuario a lo largo de todas sus conversaciones.<br>Permite identificar patrones recurrentes, velocidad de transformación y temas dominantes.</div>', unsafe_allow_html=True)
+
+    # Cargar todas las evaluaciones de conversacion
+    convs_all = sb("evaluaciones_conversacion", "order=timestamp.asc", limit=500)
+
+    if not convs_all:
+        st.info("No hay usuarios con historial aun. Los datos apareceran cuando los usuarios realicen multiples sesiones con su codigo.")
+    else:
+        # Agrupar por user_code
+        from collections import defaultdict
+        usuarios_data = defaultdict(list)
+        for c in convs_all:
+            uc = c.get("user_code","anonimo")
+            usuarios_data[uc].append(c)
+
+        # Filtro
+        user_list = sorted(usuarios_data.keys())
+        selected = st.selectbox("Seleccionar usuario", ["todos"] + user_list)
+        if selected != "todos":
+            usuarios_data = {selected: usuarios_data[selected]}
+
+        for user_code, sesiones in usuarios_data.items():
+            if not sesiones: continue
+            sesiones_ord = sorted(sesiones, key=lambda x: x.get("timestamp",""))
+
+            scores    = [s.get("score_transformacion",0) for s in sesiones_ord]
+            arcos     = [s.get("arco_detectado","estable") for s in sesiones_ord]
+            pos_final = [s.get("posicion_final","victima") for s in sesiones_ord]
+            llaves    = [s.get("llave_maestra_dominante","") for s in sesiones_ord if s.get("llave_maestra_dominante")]
+            declaraciones = sum(1 for s in sesiones_ord if s.get("declaracion_detectada"))
+            turnos_totales = sum(s.get("total_turnos",0) for s in sesiones_ord)
+
+            # Score medio y tendencia
+            score_medio = round(sum(scores)/len(scores)) if scores else 0
+            score_inicio = scores[0] if scores else 0
+            score_final  = scores[-1] if scores else 0
+            tendencia = score_final - score_inicio
+
+            def eje_lbl(s):
+                if s>=81: return "TRANSFORMACIÓN"
+                if s>=61: return "PROTAGONISMO"
+                if s>=41: return "TRANSICIÓN"
+                if s>=21: return "CONCIENCIA"
+                return "SUPERVIVENCIA"
+
+            tend_color = "#4ac17a" if tendencia>0 else "#c14a4a" if tendencia<0 else "#5a6280"
+            tend_txt   = f"+{tendencia}" if tendencia>0 else str(tendencia)
+
+            POS_COLOR = {"protagonista":"#4ac17a","mixto":"#c17a4a","victima":"#c14a4a"}
+            ultima_pos = pos_final[-1] if pos_final else "victima"
+            pos_color  = POS_COLOR.get(ultima_pos, "#5a6280")
+
+            with st.expander(f"👤 {user_code}  ·  {len(sesiones)} sesion(es)  ·  Score medio: {score_medio}/100  ·  {eje_lbl(score_medio)}", expanded=True if selected != "todos" else False):
+
+                # Métricas resumen
+                um1,um2,um3,um4,um5 = st.columns(5)
+                with um1:
+                    sc = "#4ac17a" if score_medio>=61 else "#c17a4a" if score_medio>=41 else "#c14a4a"
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.5rem;font-weight:700;color:{sc}">{score_medio}</div><div class="nk">Score medio</div></div>', unsafe_allow_html=True)
+                with um2:
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.3rem;font-weight:600;color:{tend_color}">{tend_txt}</div><div class="nk">Tendencia</div></div>', unsafe_allow_html=True)
+                with um3:
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1rem;font-weight:600;color:{pos_color}">{ultima_pos}</div><div class="nk">Posicion actual</div></div>', unsafe_allow_html=True)
+                with um4:
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.4rem;font-weight:600;color:#4a7fc1">{len(sesiones)}</div><div class="nk">Sesiones</div></div>', unsafe_allow_html=True)
+                with um5:
+                    decl_c = "#4ac17a" if declaraciones>0 else "#5a6280"
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.4rem;font-weight:600;color:{decl_c}">{declaraciones}</div><div class="nk">Declaraciones</div></div>', unsafe_allow_html=True)
+
+                st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+                # Línea de tiempo de scores — barra HTML visual
+                st.markdown("**Evolución del Score de Transformación**")
+                timeline_html = '<div style="display:flex;gap:6px;align-items:flex-end;height:80px;margin:8px 0">'
+                for i, (sc_val, arc, ts) in enumerate(zip(scores, arcos, [s.get("timestamp","")[:10] for s in sesiones_ord])):
+                    h_pct = max(8, sc_val)
+                    c = "#4ac17a" if sc_val>=61 else "#c17a4a" if sc_val>=41 else "#c14a4a" if sc_val>=21 else "#8a3a3a"
+                    timeline_html += f'<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:3px">'
+                    timeline_html += f'<div style="font-size:0.55rem;color:#5a6280">{sc_val}</div>'
+                    timeline_html += f'<div style="background:{c};height:{h_pct}%;width:100%;border-radius:3px 3px 0 0;min-height:6px"></div>'
+                    timeline_html += f'<div style="font-size:0.5rem;color:#3a4060">{ts[-5:]}</div>'
+                    timeline_html += '</div>'
+                timeline_html += '</div>'
+                st.markdown(timeline_html, unsafe_allow_html=True)
+
+                # Marcas del eje
+                eje_html = '<div style="display:flex;justify-content:space-between;font-size:0.5rem;color:#3a4060;margin-bottom:8px;border-top:1px solid #1a1a2a;padding-top:3px">'
+                eje_html += '<span>SUPERVIVENCIA</span><span>CONCIENCIA</span><span>TRANSICIÓN</span><span>PROTAGONISMO</span><span>TRANSFORMACIÓN</span>'
+                eje_html += '</div>'
+                st.markdown(eje_html, unsafe_allow_html=True)
+
+                # Temas recurrentes
+                if llaves:
+                    from collections import Counter
+                    llave_count = Counter(llaves)
+                    st.markdown("**Temas dominantes recurrentes**")
+                    lc1, lc2 = st.columns(2)
+                    for i, (llave, count) in enumerate(llave_count.most_common(6)):
+                        col = lc1 if i%2==0 else lc2
+                        with col:
+                            pct = round(count/len(llaves)*100)
+                            st.markdown(f'<div style="font-size:0.7rem;color:#9a9eb0;margin:3px 0">`{llave}` — {count}x ({pct}%)</div>', unsafe_allow_html=True)
+
+                # Historial de sesiones
+                st.markdown("**Historial de sesiones**")
+                for i, s in enumerate(sesiones_ord):
+                    sc_v = s.get("score_transformacion",0)
+                    arc  = s.get("arco_detectado","estable")
+                    ts   = s.get("timestamp","")[:16]
+                    pf   = s.get("posicion_final","?")
+                    sid  = s.get("session_id","?")[:8]
+                    decl = "✓ Declaración" if s.get("declaracion_detectada") else ""
+                    sc_c = "#4ac17a" if sc_v>=61 else "#c17a4a" if sc_v>=41 else "#c14a4a"
+                    arc_c = ARCO_COLOR.get(arc,"#5a6280") if "ARCO_COLOR" in dir() else "#5a6280"
+                    st.markdown(
+                        f'<div style="background:var(--s);border:1px solid var(--b);border-radius:6px;padding:0.5rem 0.8rem;margin:0.2rem 0;display:flex;gap:1.5rem;align-items:center;font-size:0.7rem;">' +
+                        f'<span style="color:#3a5080">#{i+1}</span>' +
+                        f'<span style="color:{sc_c};font-weight:600">{sc_v}/100</span>' +
+                        f'<span style="color:#5a6280">{eje_lbl(sc_v)}</span>' +
+                        f'<span style="color:{POS_COLOR.get(pf,"#5a6280")}">{pf}</span>' +
+                        f'<span style="color:#4ac17a;font-size:0.65rem">{decl}</span>' +
+                        f'<span style="color:#3a4060;margin-left:auto">{ts}</span>' +
+                        '</div>', unsafe_allow_html=True)
+
+                # Última recomendación
+                ultima_recom = sesiones_ord[-1].get("recomendacion","") if sesiones_ord else ""
+                if ultima_recom:
+                    st.markdown(f'<div style="background:#1a1a2a;border-left:3px solid #4a7fc1;border-radius:0 6px 6px 0;padding:0.7rem 1rem;margin-top:0.8rem;font-size:0.8rem;color:#9a9eb0;font-style:italic;">Proxima sesion: {ultima_recom}</div>', unsafe_allow_html=True)
+
+elif vista == "Conversaciones":elif vista == "Conversaciones":
     st.markdown("### Conversaciones — Arco de Transformación")
     st.markdown('<div style="font-size:0.7rem;color:#5a6280;margin-bottom:1rem;line-height:1.6;">Evaluación del arco completo de cada conversación. Score 0-100 según el Eje de Transformación del observador.<br>0=Supervivencia · 20=Conciencia · 40=Transición · 60=Protagonismo · 80=Transformación</div>', unsafe_allow_html=True)
 
