@@ -84,7 +84,7 @@ def api_ok():
 with st.sidebar:
     st.markdown("**◈ ONTOMIND**")
     st.markdown("---")
-    vista = st.radio("Vista", ["Resumen","Log de Nodos","Alertas VIGIL","Sesiones","Consultar sesion"],
+    vista = st.radio("Vista", ["Resumen","Conversaciones","Log de Nodos","Alertas VIGIL","Sesiones","Consultar sesion"],
                      label_visibility="collapsed")
     st.markdown("---")
     if st.button("Actualizar", type="primary"): st.cache_data.clear(); st.rerun()
@@ -122,11 +122,120 @@ if vista == "Resumen":
             avg = round(sum(scores)/len(scores),1)
             sc = "#4ac17a" if avg>=30 else "#c17a4a" if avg>=20 else "#c14a4a"
             st.markdown(f'Score medio recompensa: <span style="color:{sc};font-weight:600">{avg}/40</span>', unsafe_allow_html=True)
+        # Score conversacional medio
+        convs_all = sb("evaluaciones_conversacion", "order=timestamp.desc", limit=200)
+        if convs_all:
+            scores_conv = [c.get("score_transformacion",0) for c in convs_all]
+            avg_conv = round(sum(scores_conv)/len(scores_conv),1)
+            sc_conv = "#4ac17a" if avg_conv>=61 else "#c17a4a" if avg_conv>=41 else "#c14a4a"
+            st.markdown(f'Score medio transformacion: <span style="color:{sc_conv};font-weight:600">{avg_conv}/100</span>', unsafe_allow_html=True)
         with cb:
             for lm,n in sorted(llaves.items(),key=lambda x:-x[1])[:6]: st.markdown(f'`{lm}` — {n}x')
     else:
         st.info("Aun no hay sesiones. Los datos apareceran cuando los usuarios interactuen con ONTOMIND.")
 
+
+elif vista == "Conversaciones":
+    st.markdown("### Conversaciones — Arco de Transformación")
+    st.markdown('<div style="font-size:0.7rem;color:#5a6280;margin-bottom:1rem;line-height:1.6;">Evaluación del arco completo de cada conversación. Score 0-100 según el Eje de Transformación del observador.<br>0=Supervivencia · 20=Conciencia · 40=Transición · 60=Protagonismo · 80=Transformación</div>', unsafe_allow_html=True)
+
+    # Filtros
+    cf1, cf2 = st.columns([2,1])
+    with cf1: ufilt = st.text_input("Filtrar por User Code (vacio = todos)", placeholder="JAVIER-01...")
+    with cf2: arco_filt = st.selectbox("Arco", ["todos","transformacion","avance","estable","regresion"])
+
+    params = "order=timestamp.desc"
+    if ufilt: params += f"&user_code=like.{ufilt}%25"
+    if arco_filt != "todos": params += f"&arco_detectado=eq.{arco_filt}"
+    convs = sb("evaluaciones_conversacion", params, limit=50)
+
+    if not convs:
+        st.info("No hay conversaciones evaluadas aun. Realiza una sesion completa para ver los datos.")
+    else:
+        st.markdown(f"**{len(convs)} conversacion(es)**")
+
+        ARCO_COLOR = {"transformacion":"#4ac17a","avance":"#7ec17a","estable":"#5a6280","regresion":"#c14a4a"}
+        POS_COLOR  = {"protagonista":"#4ac17a","mixto":"#c17a4a","victima":"#c14a4a"}
+
+        def score_bar(score):
+            pct = min(100, max(0, score))
+            if pct >= 61: color = "#4ac17a"
+            elif pct >= 41: color = "#c17a4a"
+            elif pct >= 21: color = "#c1a44a"
+            else: color = "#c14a4a"
+            return f'<div style="background:#1a1a24;border-radius:4px;height:8px;margin:4px 0"><div style="background:{color};width:{pct}%;height:8px;border-radius:4px;transition:width 0.3s"></div></div>'
+
+        def eje_label(score):
+            if score >= 81: return "TRANSFORMACIÓN"
+            if score >= 61: return "PROTAGONISMO"
+            if score >= 41: return "TRANSICIÓN"
+            if score >= 21: return "CONCIENCIA"
+            return "SUPERVIVENCIA"
+
+        for conv in convs:
+            score = conv.get("score_transformacion", 0)
+            arco  = conv.get("arco_detectado", "estable")
+            user  = conv.get("user_code", "anonimo")
+            sid   = conv.get("session_id", "?")[:8]
+            ts    = conv.get("timestamp", "")[:16]
+            pos_i = conv.get("posicion_inicial", "?")
+            pos_f = conv.get("posicion_final", "?")
+            turnos= conv.get("total_turnos", 0)
+            decl  = conv.get("declaracion_detectada", False)
+            dictamen = conv.get("dictamen_conversacion", "")
+            recom    = conv.get("recomendacion", "")
+            llave    = conv.get("llave_maestra_dominante", "—")
+            riesgo   = conv.get("nivel_riesgo_max", "ninguno")
+
+            arco_c = ARCO_COLOR.get(arco, "#5a6280")
+            pi_c   = POS_COLOR.get(pos_i, "#5a6280")
+            pf_c   = POS_COLOR.get(pos_f, "#5a6280")
+
+            titulo = f"{'👤 ' + user if user != 'anonimo' else '◎'} Sesion {sid}... · {ts} · {eje_label(score)} ({score}/100)"
+            with st.expander(titulo, expanded=False):
+                # Score bar
+                st.markdown(score_bar(score), unsafe_allow_html=True)
+
+                # Métricas principales
+                mc1,mc2,mc3,mc4,mc5 = st.columns(5)
+                with mc1:
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.6rem;font-weight:700;color:{"#4ac17a" if score>=61 else "#c17a4a" if score>=41 else "#c14a4a"}">{score}</div><div class="nk">Score /100</div></div>', unsafe_allow_html=True)
+                with mc2:
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1rem;font-weight:600;color:{arco_c}">{arco.upper()}</div><div class="nk">Arco</div></div>', unsafe_allow_html=True)
+                with mc3:
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:0.9rem;color:{pi_c}">{pos_i}</div><div style="font-size:0.7rem;color:#5a6280">→</div><div style="font-size:0.9rem;color:{pf_c}">{pos_f}</div><div class="nk">Posicion</div></div>', unsafe_allow_html=True)
+                with mc4:
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.4rem;font-weight:600;color:#4a7fc1">{turnos}</div><div class="nk">Turnos</div></div>', unsafe_allow_html=True)
+                with mc5:
+                    decl_color = "#4ac17a" if decl else "#5a6280"
+                    decl_txt = "SÍ" if decl else "No"
+                    st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.2rem;font-weight:600;color:{decl_color}">{decl_txt}</div><div class="nk">Declaración</div></div>', unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Declaración si existe
+                decl_texto = conv.get("declaracion_texto", "")
+                if decl and decl_texto:
+                    st.markdown(f'<div style="background:#1a2a1a;border-left:3px solid #4ac17a;border-radius:0 6px 6px 0;padding:0.8rem 1rem;margin:0.5rem 0;font-family:Cormorant Garamond,serif;font-size:1rem;color:#e8e4dc;font-style:italic;">"{decl_texto}"</div>', unsafe_allow_html=True)
+
+                # Detalles
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.markdown(f'<span class="nk">Llave maestra:</span> <span class="nv">{llave}</span>', unsafe_allow_html=True)
+                    st.markdown(f'<span class="nk">Riesgo max:</span> <span class="nv">{riesgo}</span>', unsafe_allow_html=True)
+                with col_b:
+                    turno_q = conv.get("turno_quiebre", 0)
+                    if turno_q:
+                        st.markdown(f'<span class="nk">Turno de quiebre:</span> <span class="nv">Turno {turno_q}</span>', unsafe_allow_html=True)
+
+                # Dictamen del arco
+                if dictamen:
+                    st.markdown("**Dictamen del arco conversacional**")
+                    st.markdown(f'<div class="re-box">{dictamen}</div>', unsafe_allow_html=True)
+
+                # Recomendación
+                if recom:
+                    st.markdown(f'<div style="background:#1a1a2a;border-left:3px solid #4a7fc1;border-radius:0 6px 6px 0;padding:0.7rem 1rem;margin:0.4rem 0;font-size:0.8rem;color:#9a9eb0;font-style:italic;">Proxima sesion: {recom}</div>', unsafe_allow_html=True)
 
 elif vista == "Log de Nodos":
     st.markdown("### Log de Nodos — Registro de aprendizaje")
