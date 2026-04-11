@@ -474,9 +474,12 @@ elif vista == "Log de Nodos":
                             st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.4rem;font-weight:600;color:{c}">{val}<span style="font-size:0.6rem;color:#5a6280">/{max_v}</span></div><div class="nk" style="font-size:0.55rem">{label}</div></div>', unsafe_allow_html=True)
                     # Bonus y penalizaciones adicionales
                     badges_extra = []
-                    if ev.get("brevedad_impacto"): badges_extra.append('<span style="color:#4ac17a;font-size:0.6rem;padding:2px 6px;border:1px solid #4ac17a;border-radius:10px;">+10 Brevedad de Impacto</span>')
-                    if ev.get("patron_repetitivo"): badges_extra.append('<span style="color:#c17a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c17a4a;border-radius:10px;">-15 Patrón Repetitivo</span>')
-                    if arrog: badges_extra.append('<span style="color:#c14a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c14a4a;border-radius:10px;">-20 Arrogancia Intelectual</span>')
+                    if ev.get("brevedad_impacto"):    badges_extra.append('<span style="color:#4ac17a;font-size:0.6rem;padding:2px 6px;border:1px solid #4ac17a;border-radius:10px;">+10 Brevedad</span>')
+                    if ev.get("rotundidad_seca"):     badges_extra.append('<span style="color:#4ac17a;font-size:0.6rem;padding:2px 6px;border:1px solid #4ac17a;border-radius:10px;">+15 Rotundidad Seca</span>')
+                    if ev.get("zarpazo_identidad"):   badges_extra.append('<span style="color:#4a9cc1;font-size:0.6rem;padding:2px 6px;border:1px solid #4a9cc1;border-radius:10px;">+5 Zarpazo Identidad</span>')
+                    if ev.get("patron_repetitivo"):   badges_extra.append('<span style="color:#c17a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c17a4a;border-radius:10px;">-15 Patrón Repetitivo</span>')
+                    if ev.get("lenguaje_manual"):     badges_extra.append('<span style="color:#c14a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c14a4a;border-radius:10px;">-20 Lenguaje de Manual</span>')
+                    if arrog:                         badges_extra.append('<span style="color:#c14a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c14a4a;border-radius:10px;">-20 Arrogancia Intelectual</span>')
                     if badges_extra:
                         st.markdown(" ".join(badges_extra), unsafe_allow_html=True)
                     nota = ev.get("nota_evaluador","")
