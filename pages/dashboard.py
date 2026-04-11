@@ -462,8 +462,8 @@ elif vista == "Log de Nodos":
                     ec1,ec2,ec3,ec4,ec5 = st.columns(5)
                     metrics_def = [
                         (ec1,"Escucha Sombras", ev.get("escucha_sombras",0), 15),
-                        (ec2,"Voz Supervivencia", ev.get("voz_supervivencia",0), 10),
-                        (ec3,"Persistencia", ev.get("persistencia",0), 10),
+                        (ec2,"Zarpazo Inter.", ev.get("zarpazo_intercalado",0), 10),
+                        (ec3,"Espejo Crudo", ev.get("espejo_crudo",0), 10),
                         (ec4,"→ Declaración", ev.get("hacia_declaracion",0), 5),
                         (ec5,"SCORE /40", score, 40),
                     ]
@@ -472,8 +472,13 @@ elif vista == "Log de Nodos":
                         c = "#4ac17a" if pct>=0.7 else "#c17a4a" if pct>=0.4 else "#c14a4a"
                         with col:
                             st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.4rem;font-weight:600;color:{c}">{val}<span style="font-size:0.6rem;color:#5a6280">/{max_v}</span></div><div class="nk" style="font-size:0.55rem">{label}</div></div>', unsafe_allow_html=True)
-                    if arrog:
-                        st.markdown('<div style="color:#c14a4a;font-size:0.65rem;margin-top:0.3rem;">⚠ PENALIZACIÓN: Arrogancia Intelectual detectada (-20)</div>', unsafe_allow_html=True)
+                    # Bonus y penalizaciones adicionales
+                    badges_extra = []
+                    if ev.get("brevedad_impacto"): badges_extra.append('<span style="color:#4ac17a;font-size:0.6rem;padding:2px 6px;border:1px solid #4ac17a;border-radius:10px;">+10 Brevedad de Impacto</span>')
+                    if ev.get("patron_repetitivo"): badges_extra.append('<span style="color:#c17a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c17a4a;border-radius:10px;">-15 Patrón Repetitivo</span>')
+                    if arrog: badges_extra.append('<span style="color:#c14a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c14a4a;border-radius:10px;">-20 Arrogancia Intelectual</span>')
+                    if badges_extra:
+                        st.markdown(" ".join(badges_extra), unsafe_allow_html=True)
                     nota = ev.get("nota_evaluador","")
                     if nota:
                         st.markdown(f'<div style="font-size:0.75rem;color:#7a7a84;font-style:italic;margin-top:0.3rem;">{nota}</div>', unsafe_allow_html=True)
