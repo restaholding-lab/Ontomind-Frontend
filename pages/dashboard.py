@@ -350,6 +350,10 @@ elif vista == "Conversaciones":
                     st.markdown(f'<div style="background:#1a2a1a;border-left:3px solid #4ac17a;border-radius:0 6px 6px 0;padding:0.8rem 1rem;margin:0.5rem 0;font-family:Cormorant Garamond,serif;font-size:1rem;color:#e8e4dc;font-style:italic;">"{decl_texto}"</div>', unsafe_allow_html=True)
 
                 # Detalles
+                # Session ID completo
+                full_sid = conv.get("session_id","")
+                st.code(full_sid, language=None)
+
                 col_a, col_b = st.columns(2)
                 with col_a:
                     st.markdown(f'<span class="nk">Llave maestra:</span> <span class="nv">{llave}</span>', unsafe_allow_html=True)
@@ -515,21 +519,40 @@ elif vista == "Etiquetado DPO":
     # Formulario de etiquetado
     st.markdown("#### Nuevo par DPO")
     with st.form("form_dpo", clear_on_submit=True):
+        # Session ID con auto-carga
+        dpo_session = st.text_input("Session ID completo", placeholder="Pega el session_id y pulsa Enter para cargar datos automaticamente...")
+
+        auto_ui, auto_rej, auto_llave, auto_turno, auto_score = "", "", "", 1, 0
+        if dpo_session and len(dpo_session) > 10:
+            logs_s = sb("log_nodos", f"session_id=eq.{dpo_session}&order=turno.desc", limit=20)
+            if logs_s:
+                st.success(f"Sesion encontrada — {len(logs_s)} turno(s)")
+                turno_opts = [l.get("turno",1) for l in logs_s]
+                turno_sel = st.selectbox("Seleccionar turno", options=turno_opts, format_func=lambda t: f"Turno {t}")
+                log_s = next((l for l in logs_s if l.get("turno")==turno_sel), logs_s[0])
+                auto_ui    = log_s.get("user_input","")
+                auto_rej   = log_s.get("respuesta","")
+                auto_llave = pj(log_s.get("dictamen",{})).get("llave_maestra","")
+                auto_turno = turno_sel
+                auto_score = pj(log_s.get("evaluacion",{})).get("score_total",0)
+                st.markdown(f"**Llave:** {auto_llave} · **Score rechazada:** {auto_score}/55")
+            elif dpo_session:
+                st.warning("Sesion no encontrada. Verifica el ID completo.")
+
         fc1, fc2 = st.columns(2)
         with fc1:
-            dpo_session = st.text_input("Session ID", placeholder="Pega el session_id del turno...")
-            dpo_turno   = st.number_input("Turno", min_value=1, value=1)
-            dpo_perfil  = st.selectbox("Perfil detectado", ["dolor_agudo","juez_control","victima_estancada","orgullo_herida","reflexivo","general"])
+            dpo_turno  = st.number_input("Turno", min_value=1, value=auto_turno)
+            dpo_perfil = st.selectbox("Perfil detectado", ["dolor_agudo","juez_control","victima_estancada","orgullo_herida","reflexivo","general"])
         with fc2:
-            dpo_llave     = st.text_input("Llave maestra", placeholder="ej: Generalización")
-            dpo_categoria = st.selectbox("Categoría", ["dolor_agudo","juez","victima","orgullo","general"])
+            dpo_llave     = st.text_input("Llave maestra", value=auto_llave, placeholder="ej: Generalizacion")
+            dpo_categoria = st.selectbox("Categoria", ["dolor_agudo","juez","victima","orgullo","general"])
             dpo_supervisor = st.text_input("Supervisor", value="admin")
 
-        dpo_user_input = st.text_area("Mensaje del usuario", height=80, placeholder="El mensaje original del usuario...")
-        dpo_rejected   = st.text_area("Respuesta RECHAZADA (lo que generó ONTOMIND)", height=120, placeholder="Pega la respuesta generada por ONTOMIND...")
-        dpo_chosen     = st.text_area("Respuesta ELEGIDA (corrección ideal del supervisor)", height=120, placeholder="Escribe la respuesta correcta que debería haber generado ONTOMIND...")
+        dpo_user_input = st.text_area("Mensaje del usuario", value=auto_ui, height=80)
+        dpo_rejected   = st.text_area("Respuesta RECHAZADA (generada por ONTOMIND)", value=auto_rej, height=120)
+        dpo_chosen     = st.text_area("Respuesta ELEGIDA (correccion ideal)", height=120, placeholder="Escribe la respuesta correcta...")
         dpo_notas      = st.text_area("Notas del supervisor", height=60, placeholder="Por qué se rechazó y qué aporta la corrección...")
-        dpo_score      = st.slider("Score de la respuesta rechazada", 0, 55, 10)
+        dpo_score      = st.slider("Score de la respuesta rechazada", 0, 55, auto_score)
 
         submitted = st.form_submit_button("Guardar par DPO", type="primary")
         if submitted:
