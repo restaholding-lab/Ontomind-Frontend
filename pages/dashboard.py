@@ -84,7 +84,7 @@ def api_ok():
 with st.sidebar:
     st.markdown("**◈ ONTOMIND**")
     st.markdown("---")
-    vista = st.radio("Vista", ["Resumen","Usuarios","Conversaciones","Log de Nodos","Alertas VIGIL","Sesiones","Consultar sesion"],
+    vista = st.radio("Vista", ["Resumen","Usuarios","Conversaciones","Log de Nodos","Etiquetado DPO","Alertas VIGIL","Sesiones","Consultar sesion"],
                      label_visibility="collapsed")
     st.markdown("---")
     if st.button("Actualizar", type="primary"): st.cache_data.clear(); st.rerun()
@@ -486,6 +486,136 @@ elif vista == "Log de Nodos":
                     if nota:
                         st.markdown(f'<div style="font-size:0.75rem;color:#7a7a84;font-style:italic;margin-top:0.3rem;">{nota}</div>', unsafe_allow_html=True)
 
+
+elif vista == "Etiquetado DPO":
+    st.markdown("### Etiquetado DPO — Dataset de Preferencia")
+    st.markdown('<div style="font-size:0.7rem;color:#5a6280;margin-bottom:1rem;line-height:1.6;">Captura pares de preferencia para fine-tuning. Selecciona un turno del Log de Nodos, revisa la respuesta generada y escribe la corrección ideal.</div>', unsafe_allow_html=True)
+
+    # Métricas del dataset
+    pares = sb("pares_dpo", "order=created_at.desc", limit=500)
+    total   = len(pares)
+    validados = sum(1 for p in pares if p.get("validado"))
+    por_cat = {}
+    for p in pares:
+        cat = p.get("categoria","general")
+        por_cat[cat] = por_cat.get(cat,0) + 1
+
+    dm1,dm2,dm3,dm4 = st.columns(4)
+    with dm1: st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.6rem;font-weight:600;color:#4a7fc1">{total}</div><div class="nk">Pares totales</div></div>', unsafe_allow_html=True)
+    with dm2: st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.6rem;font-weight:600;color:#4ac17a">{validados}</div><div class="nk">Validados</div></div>', unsafe_allow_html=True)
+    with dm3: st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.6rem;font-weight:600;color:#c17a4a">{total-validados}</div><div class="nk">Pendientes</div></div>', unsafe_allow_html=True)
+    with dm4:
+        objetivo = 200
+        pct = min(100, round(validados/objetivo*100))
+        color = "#4ac17a" if pct >= 80 else "#c17a4a" if pct >= 40 else "#c14a4a"
+        st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.6rem;font-weight:600;color:{color}">{pct}%</div><div class="nk">Objetivo 200</div></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Formulario de etiquetado
+    st.markdown("#### Nuevo par DPO")
+    with st.form("form_dpo", clear_on_submit=True):
+        fc1, fc2 = st.columns(2)
+        with fc1:
+            dpo_session = st.text_input("Session ID", placeholder="Pega el session_id del turno...")
+            dpo_turno   = st.number_input("Turno", min_value=1, value=1)
+            dpo_perfil  = st.selectbox("Perfil detectado", ["dolor_agudo","juez_control","victima_estancada","orgullo_herida","reflexivo","general"])
+        with fc2:
+            dpo_llave     = st.text_input("Llave maestra", placeholder="ej: Generalización")
+            dpo_categoria = st.selectbox("Categoría", ["dolor_agudo","juez","victima","orgullo","general"])
+            dpo_supervisor = st.text_input("Supervisor", value="admin")
+
+        dpo_user_input = st.text_area("Mensaje del usuario", height=80, placeholder="El mensaje original del usuario...")
+        dpo_rejected   = st.text_area("Respuesta RECHAZADA (lo que generó ONTOMIND)", height=120, placeholder="Pega la respuesta generada por ONTOMIND...")
+        dpo_chosen     = st.text_area("Respuesta ELEGIDA (corrección ideal del supervisor)", height=120, placeholder="Escribe la respuesta correcta que debería haber generado ONTOMIND...")
+        dpo_notas      = st.text_area("Notas del supervisor", height=60, placeholder="Por qué se rechazó y qué aporta la corrección...")
+        dpo_score      = st.slider("Score de la respuesta rechazada", 0, 55, 10)
+
+        submitted = st.form_submit_button("Guardar par DPO", type="primary")
+        if submitted:
+            if not dpo_user_input or not dpo_rejected or not dpo_chosen:
+                st.error("Los campos User Input, Respuesta Rechazada y Respuesta Elegida son obligatorios.")
+            else:
+                payload = {
+                    "session_id": dpo_session, "turno": dpo_turno,
+                    "user_input": dpo_user_input, "perfil_detectado": dpo_perfil,
+                    "llave_maestra": dpo_llave, "categoria": dpo_categoria,
+                    "respuesta_rejected": dpo_rejected, "respuesta_chosen": dpo_chosen,
+                    "supervisor": dpo_supervisor, "score_rejected": dpo_score,
+                    "notas": dpo_notas
+                }
+                try:
+                    r = httpx.post(f"{API_URL}/admin/dpo/guardar", json=payload, timeout=15)
+                    if r.status_code == 200 and r.json().get("ok"):
+                        st.success(f"✓ Par DPO guardado correctamente.")
+                    else:
+                        st.error(f"Error: {r.text[:100]}")
+                except Exception as e:
+                    st.error(f"Error de conexión: {e}")
+
+    st.markdown("---")
+
+    # Lista de pares existentes
+    if pares:
+        st.markdown(f"#### Pares guardados ({total})")
+        filtro_cat = st.selectbox("Filtrar por categoría", ["todos"] + list(por_cat.keys()), key="dpo_cat_filter")
+        filtro_val = st.selectbox("Filtrar por estado", ["todos","validados","pendientes"], key="dpo_val_filter")
+
+        pares_filtrados = pares
+        if filtro_cat != "todos":
+            pares_filtrados = [p for p in pares_filtrados if p.get("categoria") == filtro_cat]
+        if filtro_val == "validados":
+            pares_filtrados = [p for p in pares_filtrados if p.get("validado")]
+        elif filtro_val == "pendientes":
+            pares_filtrados = [p for p in pares_filtrados if not p.get("validado")]
+
+        for par in pares_filtrados[:30]:
+            pid      = par.get("id","")
+            cat      = par.get("categoria","general")
+            perfil   = par.get("perfil_detectado","")
+            ts       = par.get("created_at","")[:16]
+            val      = par.get("validado", False)
+            score_r  = par.get("score_rejected", 0)
+            sup      = par.get("supervisor","admin")
+            val_badge = '<span style="color:#4ac17a;font-size:0.6rem;padding:2px 6px;border:1px solid #4ac17a;border-radius:8px">✓ Validado</span>' if val else '<span style="color:#c17a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c17a4a;border-radius:8px">⏳ Pendiente</span>'
+
+            with st.expander(f"#{pid} · {cat} · {ts} · score_rejected: {score_r}/55 {'✓' if val else ''}", expanded=False):
+                st.markdown(f'<div style="margin-bottom:0.5rem">{val_badge} <span style="font-size:0.65rem;color:#5a6280">Perfil: {perfil} · Supervisor: {sup}</span></div>', unsafe_allow_html=True)
+
+                st.markdown("**Usuario dijo:**")
+                st.markdown(f'<div class="re-box" style="font-size:0.8rem">{par.get("user_input","")}</div>', unsafe_allow_html=True)
+
+                rc1, rc2 = st.columns(2)
+                with rc1:
+                    st.markdown('<div style="color:#c14a4a;font-size:0.7rem;font-weight:600;margin-bottom:0.3rem">✗ RECHAZADA (generada)</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="re-box" style="border-left:3px solid #c14a4a;font-size:0.8rem">{par.get("respuesta_rejected","")}</div>', unsafe_allow_html=True)
+                with rc2:
+                    st.markdown('<div style="color:#4ac17a;font-size:0.7rem;font-weight:600;margin-bottom:0.3rem">✓ ELEGIDA (corrección)</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="re-box" style="border-left:3px solid #4ac17a;font-size:0.8rem">{par.get("respuesta_chosen","")}</div>', unsafe_allow_html=True)
+
+                if par.get("notas"):
+                    st.markdown(f'<div style="font-size:0.7rem;color:#7a7a84;font-style:italic;margin-top:0.5rem">Notas: {par["notas"]}</div>', unsafe_allow_html=True)
+
+        # Botón exportar dataset
+        st.markdown("---")
+        if st.button("Exportar dataset DPO (JSON)", type="secondary"):
+            import json as _json
+            dataset = []
+            for p in pares:
+                if p.get("validado") or True:  # exportar todos por ahora
+                    dataset.append({
+                        "prompt": p.get("user_input",""),
+                        "chosen": p.get("respuesta_chosen",""),
+                        "rejected": p.get("respuesta_rejected",""),
+                        "categoria": p.get("categoria","general"),
+                        "perfil": p.get("perfil_detectado",""),
+                    })
+            st.download_button(
+                "⬇ Descargar dataset_dpo.json",
+                data=_json.dumps(dataset, ensure_ascii=False, indent=2),
+                file_name="dataset_dpo.json",
+                mime="application/json"
+            )
 
 elif vista == "Alertas VIGIL":
     st.markdown("### Alertas VIGIL")
