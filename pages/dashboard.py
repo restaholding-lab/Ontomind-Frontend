@@ -120,12 +120,12 @@ if vista == "Resumen":
         scores = [pj(l.get("evaluacion",{})).get("score_total",0) for l in logs if l.get("evaluacion")]
         if scores:
             avg = round(sum(scores)/len(scores),1)
-            sc = "#4ac17a" if avg>=30 else "#c17a4a" if avg>=20 else "#c14a4a"
-            st.markdown(f'Score medio recompensa: <span style="color:{sc};font-weight:600">{avg}/40</span>', unsafe_allow_html=True)
+            sc = "#4ac17a" if avg>=50 else "#c17a4a" if avg>=30 else "#c14a4a"
+            st.markdown(f'Score medio recompensa: <span style="color:{sc};font-weight:600">{avg}/75</span>', unsafe_allow_html=True)
         # Score conversacional medio
         convs_all = sb("evaluaciones_conversacion", "order=timestamp.desc", limit=200)
         if convs_all:
-            scores_conv = [c.get("score_transformacion",0) for c in convs_all]
+            scores_conv = [c.get("score_condiciones",0) for c in convs_all]
             avg_conv = round(sum(scores_conv)/len(scores_conv),1)
             sc_conv = "#4ac17a" if avg_conv>=61 else "#c17a4a" if avg_conv>=41 else "#c14a4a"
             st.markdown(f'Score medio transformacion: <span style="color:{sc_conv};font-weight:600">{avg_conv}/100</span>', unsafe_allow_html=True)
@@ -162,7 +162,7 @@ elif vista == "Usuarios":
             if not sesiones: continue
             sesiones_ord = sorted(sesiones, key=lambda x: x.get("timestamp",""))
 
-            scores    = [s.get("score_transformacion",0) for s in sesiones_ord]
+            scores    = [s.get("score_condiciones",0) for s in sesiones_ord]
             arcos     = [s.get("arco_detectado","estable") for s in sesiones_ord]
             pos_final = [s.get("posicion_final","victima") for s in sesiones_ord]
             llaves    = [s.get("llave_maestra_dominante","") for s in sesiones_ord if s.get("llave_maestra_dominante")]
@@ -243,7 +243,7 @@ elif vista == "Usuarios":
                 # Historial de sesiones
                 st.markdown("**Historial de sesiones**")
                 for i, s in enumerate(sesiones_ord):
-                    sc_v = s.get("score_transformacion",0)
+                    sc_v = s.get("score_condiciones",0)
                     arc  = s.get("arco_detectado","estable")
                     ts   = s.get("timestamp","")[:16]
                     pf   = s.get("posicion_final","?")
@@ -304,7 +304,7 @@ elif vista == "Conversaciones":
             return "SUPERVIVENCIA"
 
         for conv in convs:
-            score = conv.get("score_transformacion", 0)
+            score = conv.get("score_condiciones", 0)
             arco  = conv.get("arco_detectado", "estable")
             user  = conv.get("user_code", "anonimo")
             sid   = conv.get("session_id", "?")[:8]
@@ -313,7 +313,7 @@ elif vista == "Conversaciones":
             pos_f = conv.get("posicion_final", "?")
             turnos= conv.get("total_turnos", 0)
             decl  = conv.get("declaracion_detectada", False)
-            dictamen = conv.get("dictamen_conversacion", "")
+            dictamen = conv.get("semilla_plantada", "")
             recom    = conv.get("recomendacion", "")
             llave    = conv.get("llave_maestra_dominante", "—")
             riesgo   = conv.get("nivel_riesgo_max", "ninguno")
@@ -359,13 +359,15 @@ elif vista == "Conversaciones":
                     st.markdown(f'<span class="nk">Llave maestra:</span> <span class="nv">{llave}</span>', unsafe_allow_html=True)
                     st.markdown(f'<span class="nk">Riesgo max:</span> <span class="nv">{riesgo}</span>', unsafe_allow_html=True)
                 with col_b:
-                    turno_q = conv.get("turno_quiebre", 0)
-                    if turno_q:
-                        st.markdown(f'<span class="nk">Turno de quiebre:</span> <span class="nv">Turno {turno_q}</span>', unsafe_allow_html=True)
+                    semilla = conv.get("semilla_plantada", "")
+                    posib  = "✓" if conv.get("posibilidad_nueva") else "—"
+                    creenc = conv.get("creencia_en_movimiento","no")
+                    if semilla and semilla != "no":
+                        st.markdown(f'<span class="nk">Semilla plantada:</span> <span class="nv">{semilla}</span>', unsafe_allow_html=True)
 
-                # Dictamen del arco
-                if dictamen:
-                    st.markdown("**Dictamen del arco conversacional**")
+                # Semilla plantada
+                if dictamen and dictamen not in ("no",""):
+                    st.markdown("**Semilla plantada para la próxima sesión**")
                     st.markdown(f'<div class="re-box">{dictamen}</div>', unsafe_allow_html=True)
 
                 # Recomendación
@@ -456,34 +458,44 @@ elif vista == "Log de Nodos":
                 st.markdown("**Respuesta generada**")
                 st.markdown(f'<div class="re-box">{log.get("respuesta","")}</div>',unsafe_allow_html=True)
 
-                # Metricas de Recompensa Antropologica
+                # Evaluador de Condiciones de Transformación
                 ev = pj(log.get("evaluacion"))
                 if ev:
                     score = ev.get("score_total", 0)
-                    arrog = ev.get("arrogancia_intelectual", False)
-                    score_color = "#4ac17a" if score >= 30 else "#c17a4a" if score >= 20 else "#c14a4a"
-                    st.markdown("**Evaluación de Recompensa Antropológica**")
-                    ec1,ec2,ec3,ec4,ec5 = st.columns(5)
-                    metrics_def = [
-                        (ec1,"Escucha Sombras", ev.get("escucha_sombras",0), 15),
-                        (ec2,"Zarpazo Inter.", ev.get("zarpazo_intercalado",0), 10),
-                        (ec3,"Espejo Crudo", ev.get("espejo_crudo",0), 10),
-                        (ec4,"→ Declaración", ev.get("hacia_declaracion",0), 5),
-                        (ec5,"SCORE /40", score, 40),
+                    score_color = "#4ac17a" if score >= 55 else "#c17a4a" if score >= 35 else "#c14a4a"
+                    st.markdown("**Evaluación — Condiciones de Transformación**")
+                    # Fila 1: 4 dimensiones principales
+                    ec1,ec2,ec3,ec4 = st.columns(4)
+                    row1 = [
+                        (ec1, "Apertura Posib.", ev.get("apertura_posibilidad",0), 15),
+                        (ec2, "Escucha Activa",  ev.get("escucha_activa",0),       15),
+                        (ec3, "Emoción Indic.",  ev.get("emocion_indicador",0),    10),
+                        (ec4, "Incomodidad",     ev.get("incomodidad_calibrada",0),10),
                     ]
-                    for col, label, val, max_v in metrics_def:
+                    for col, label, val, max_v in row1:
                         pct = val/max_v if max_v > 0 else 0
-                        c = "#4ac17a" if pct>=0.7 else "#c17a4a" if pct>=0.4 else "#c14a4a"
+                        col_c = "#4ac17a" if pct>=0.7 else "#c17a4a" if pct>=0.4 else "#c14a4a"
                         with col:
-                            st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.4rem;font-weight:600;color:{c}">{val}<span style="font-size:0.6rem;color:#5a6280">/{max_v}</span></div><div class="nk" style="font-size:0.55rem">{label}</div></div>', unsafe_allow_html=True)
-                    # Bonus y penalizaciones adicionales
+                            st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.3rem;font-weight:600;color:{col_c}">{val}<span style="font-size:0.55rem;color:#5a6280">/{max_v}</span></div><div class="nk" style="font-size:0.52rem">{label}</div></div>', unsafe_allow_html=True)
+                    # Fila 2: 3 dimensiones + score total
+                    ec5,ec6,ec7,ec8 = st.columns(4)
+                    row2 = [
+                        (ec5, "Lenguaje Devuelto", ev.get("lenguaje_devuelto",0),    10),
+                        (ec6, "Acompañamiento",    ev.get("acompañamiento",0),        10),
+                        (ec7, "Compromiso Emerg.", ev.get("compromiso_emergente",0),  5),
+                        (ec8, "SCORE /75",         score,                            75),
+                    ]
+                    for col, label, val, max_v in row2:
+                        pct = val/max_v if max_v > 0 else 0
+                        col_c = "#4ac17a" if pct>=0.7 else "#c17a4a" if pct>=0.4 else "#c14a4a"
+                        with col:
+                            st.markdown(f'<div class="nc" style="text-align:center"><div style="font-size:1.3rem;font-weight:600;color:{col_c}">{val}<span style="font-size:0.55rem;color:#5a6280">/{max_v}</span></div><div class="nk" style="font-size:0.52rem">{label}</div></div>', unsafe_allow_html=True)
+                    # Penalizaciones activas
                     badges_extra = []
-                    if ev.get("brevedad_impacto"):    badges_extra.append('<span style="color:#4ac17a;font-size:0.6rem;padding:2px 6px;border:1px solid #4ac17a;border-radius:10px;">+10 Brevedad</span>')
-                    if ev.get("rotundidad_seca"):     badges_extra.append('<span style="color:#4ac17a;font-size:0.6rem;padding:2px 6px;border:1px solid #4ac17a;border-radius:10px;">+15 Rotundidad Seca</span>')
-                    if ev.get("zarpazo_identidad"):   badges_extra.append('<span style="color:#4a9cc1;font-size:0.6rem;padding:2px 6px;border:1px solid #4a9cc1;border-radius:10px;">+5 Zarpazo Identidad</span>')
-                    if ev.get("patron_repetitivo"):   badges_extra.append('<span style="color:#c17a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c17a4a;border-radius:10px;">-15 Patrón Repetitivo</span>')
-                    if ev.get("lenguaje_manual"):     badges_extra.append('<span style="color:#c14a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c14a4a;border-radius:10px;">-20 Lenguaje de Manual</span>')
-                    if arrog:                         badges_extra.append('<span style="color:#c14a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c14a4a;border-radius:10px;">-20 Arrogancia Intelectual</span>')
+                    if ev.get("lenguaje_manual"):       badges_extra.append('<span style="color:#c14a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c14a4a;border-radius:10px;">-20 Advisory</span>')
+                    if ev.get("arrogancia_intelectual"):badges_extra.append('<span style="color:#c14a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c14a4a;border-radius:10px;">-20 Arrogancia</span>')
+                    if ev.get("emocion_juzgada"):       badges_extra.append('<span style="color:#c17a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c17a4a;border-radius:10px;">-10 Emoción Juzgada</span>')
+                    if ev.get("cierre_prematuro"):      badges_extra.append('<span style="color:#c17a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c17a4a;border-radius:10px;">-15 Cierre Prematuro</span>')
                     if badges_extra:
                         st.markdown(" ".join(badges_extra), unsafe_allow_html=True)
                     nota = ev.get("nota_evaluador","")
@@ -535,7 +547,7 @@ elif vista == "Etiquetado DPO":
                 auto_llave = pj(log_s.get("dictamen",{})).get("llave_maestra","")
                 auto_turno = turno_sel
                 auto_score = pj(log_s.get("evaluacion",{})).get("score_total",0)
-                st.markdown(f"**Llave:** {auto_llave} · **Score rechazada:** {auto_score}/55")
+                st.markdown(f"**Llave:** {auto_llave} · **Score rechazada:** {auto_score}/75")
             elif dpo_session:
                 st.warning("Sesion no encontrada. Verifica el ID completo.")
 
@@ -552,7 +564,7 @@ elif vista == "Etiquetado DPO":
         dpo_rejected   = st.text_area("Respuesta RECHAZADA (generada por ONTOMIND)", value=auto_rej, height=120)
         dpo_chosen     = st.text_area("Respuesta ELEGIDA (correccion ideal)", height=120, placeholder="Escribe la respuesta correcta...")
         dpo_notas      = st.text_area("Notas del supervisor", height=60, placeholder="Por qué se rechazó y qué aporta la corrección...")
-        dpo_score      = st.slider("Score de la respuesta rechazada", 0, 55, auto_score)
+        dpo_score      = st.slider("Score de la respuesta rechazada", 0, 75, auto_score)
 
         submitted = st.form_submit_button("Guardar par DPO", type="primary")
         if submitted:
@@ -602,7 +614,7 @@ elif vista == "Etiquetado DPO":
             sup      = par.get("supervisor","admin")
             val_badge = '<span style="color:#4ac17a;font-size:0.6rem;padding:2px 6px;border:1px solid #4ac17a;border-radius:8px">✓ Validado</span>' if val else '<span style="color:#c17a4a;font-size:0.6rem;padding:2px 6px;border:1px solid #c17a4a;border-radius:8px">⏳ Pendiente</span>'
 
-            with st.expander(f"#{pid} · {cat} · {ts} · score_rejected: {score_r}/55 {'✓' if val else ''}", expanded=False):
+            with st.expander(f"#{pid} · {cat} · {ts} · score_rejected: {score_r}/75 {'✓' if val else ''}", expanded=False):
                 st.markdown(f'<div style="margin-bottom:0.5rem">{val_badge} <span style="font-size:0.65rem;color:#5a6280">Perfil: {perfil} · Supervisor: {sup}</span></div>', unsafe_allow_html=True)
 
                 st.markdown("**Usuario dijo:**")
