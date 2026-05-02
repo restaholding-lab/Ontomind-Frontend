@@ -1,10 +1,11 @@
 """
-app.py - ONTOMIND v3 - botones corregidos, tooltip, contraste mejorado
+app.py - ONTOMIND v3 - flujo asíncrono con polling
 """
 import streamlit as st
 import httpx
 import uuid
 import os
+import time
 
 API_URL = os.getenv("ONTOMIND_API_URL", "https://ontomind-production.up.railway.app")
 
@@ -56,11 +57,58 @@ def nueva_sesion():
         return r.json().get("session_id")
     except: return str(uuid.uuid4())
 
-def chat(session_id,msg,user_code="anonimo"):
+def chat(session_id, msg, user_code="anonimo"):
+    """
+    Flujo asíncrono:
+    1. POST /chat → recibe job_id inmediatamente
+    2. GET /chat/status/{job_id} cada 2s hasta COMPLETED o FAILED
+    """
     try:
-        r=httpx.post(f"{API_URL}/chat",json={"session_id":session_id,"mensaje":msg,"user_code":user_code or "anonimo"},timeout=120)
-        return r.json() if r.status_code==200 else {"respuesta":"Error de conexion.","protocolo":"error"}
-    except Exception as e: return {"respuesta":f"Error: {e}","protocolo":"error"}
+        # Paso 1: Enviar mensaje y obtener job_id
+        r = httpx.post(
+            f"{API_URL}/chat",
+            json={"session_id": session_id, "mensaje": msg,
+                  "user_code": user_code or "anonimo"},
+            timeout=15
+        )
+        data = r.json()
+        job_id = data.get("job_id")
+
+        if not job_id:
+            # Respuesta directa (compatibilidad o error)
+            return data
+
+        # Paso 2: Polling hasta obtener resultado
+        for intento in range(90):  # 90 × 2s = 3 minutos máximo
+            time.sleep(2)
+            sr = httpx.get(
+                f"{API_URL}/chat/status/{job_id}",
+                timeout=10
+            )
+            status_data = sr.json()
+            status = status_data.get("status", "")
+
+            if status == "COMPLETED":
+                return status_data.get("result", {
+                    "respuesta": "",
+                    "protocolo": "error"
+                })
+
+            elif status == "FAILED":
+                error_msg = status_data.get("error", "Error desconocido")
+                return {
+                    "respuesta": f"Error interno: {error_msg}",
+                    "protocolo": "error"
+                }
+
+        # Timeout de polling
+        return {
+            "respuesta": "La respuesta está tardando más de lo esperado. Intenta de nuevo en unos segundos.",
+            "protocolo": "error"
+        }
+
+    except Exception as e:
+        return {"respuesta": f"Error de conexión: {e}", "protocolo": "error"}
 
 def badge(p):
     m={"normal":"pn","silencio":"ps","incoherencia":"pi","vigil":"pv"}
@@ -125,7 +173,8 @@ with c2:
 if enviar and mensaje and mensaje.strip():
     t=mensaje.strip()
     st.session_state.mensajes.append({"rol":"user","contenido":t})
-    with st.spinner(""): res=chat(st.session_state.session_id,t,st.session_state.user_code)
+    with st.spinner(""):
+        res=chat(st.session_state.session_id,t,st.session_state.user_code)
     st.session_state.mensajes.append({"rol":"agent","contenido":res.get("respuesta",""),"protocolo":res.get("protocolo","normal")})
     st.session_state.turno=res.get("turno",st.session_state.turno+1)
     st.session_state.input_key+=1
