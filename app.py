@@ -139,11 +139,24 @@ st.markdown(f'<div class="si">sesion {st.session_state.session_id[:8]}... · tur
 if not st.session_state.mensajes:
     st.markdown('<div style="text-align:center;padding:3rem 2rem;"><div style="font-size:2rem;color:#3a3a42;margin-bottom:1rem;">\u25c8</div><div style="font-family:Cormorant Garamond,serif;font-size:1.25rem;color:#6a6560;">\u00bfQue esta ocurriendo en tu vida que te trae aqui hoy?</div></div>',unsafe_allow_html=True)
 else:
+    # Renderizar TODOS los mensajes en un único bloque HTML
+    # para evitar el error removeChild de React/Streamlit
+    import html as _html
+    _msgs_html = []
     for msg in st.session_state.mensajes:
         if msg["rol"]=="user":
-            st.markdown(f'<div class="mc"><div class="ml">Tu</div><div class="mu">{msg["contenido"]}</div></div>',unsafe_allow_html=True)
+            _contenido = _html.escape(msg["contenido"])
+            _msgs_html.append(f'<div class="mc"><div class="ml">Tu</div><div class="mu">{_contenido}</div></div>')
         else:
-            st.markdown(f'<div class="mc"><div class="ml mla">ONTOMIND {badge(msg.get("protocolo","normal"))}</div><div class="ma">{msg["contenido"]}</div></div>',unsafe_allow_html=True)
+            _contenido = msg["contenido"]  # La respuesta del coach puede tener formato
+            _proto = msg.get("protocolo","normal")
+            _msgs_html.append(f'<div class="mc"><div class="ml mla">ONTOMIND {badge(_proto)}</div><div class="ma">{_contenido}</div></div>')
+    st.markdown('<div id="ontomind-chat">' + "".join(_msgs_html) + '</div>', unsafe_allow_html=True)
+    # Auto-scroll al final del chat
+    st.markdown("""<script>
+    const chat = document.getElementById('ontomind-chat');
+    if (chat) chat.lastElementChild?.scrollIntoView({behavior:'smooth'});
+    </script>""", unsafe_allow_html=True)
 
 st.markdown("<div style='height:175px'></div>",unsafe_allow_html=True)
 
@@ -175,7 +188,10 @@ if enviar and mensaje and mensaje.strip():
     st.session_state.mensajes.append({"rol":"user","contenido":t})
     with st.spinner(""):
         res=chat(st.session_state.session_id,t,st.session_state.user_code)
-    st.session_state.mensajes.append({"rol":"agent","contenido":res.get("respuesta",""),"protocolo":res.get("protocolo","normal")})
+    respuesta = res.get("respuesta","")
+    # Fix doble raya
+    respuesta = respuesta.replace("——","—")
+    st.session_state.mensajes.append({"rol":"agent","contenido":respuesta,"protocolo":res.get("protocolo","normal")})
     st.session_state.turno=res.get("turno",st.session_state.turno+1)
     st.session_state.input_key+=1
     st.rerun()
