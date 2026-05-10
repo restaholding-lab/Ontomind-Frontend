@@ -26,16 +26,16 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;500;600&display=swap');
 
 :root {
-    --bg: #1a1a2e;
-    --surface: #222240;
-    --surface2: #1e1e36;
-    --border: #3a3a5c;
+    --bg: #0e0e10;
+    --surface: #1a1a20;
+    --surface2: #141418;
+    --border: #2a2a32;
     --accent: #d4a855;
     --accent-soft: #e8c97d;
     --accent2: #8eaadc;
     --text: #eeeef2;
     --text-soft: #c0c0d0;
-    --dim: #8888a0;
+    --dim: #8a8580;
 }
 
 /* === GLOBAL === */
@@ -218,6 +218,55 @@ div[data-testid="stButton"] button:hover {
 /* === SPACER === */
 .om-spacer { height: 140px; }
 
+/* === USER CODE INPUT === */
+.om-usercode {
+    max-width: 300px;
+    margin: 0 auto 1.5rem;
+    text-align: center;
+}
+.om-usercode-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 0.3rem;
+}
+.om-usercode-status {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.65rem;
+    margin-top: 0.2rem;
+}
+.om-uc-on { color: #4ac17a; }
+.om-uc-off { color: var(--dim); }
+
+/* Expander del código de usuario */
+[data-testid="stExpander"] {
+    max-width: 280px !important;
+    margin: 0 auto 1rem !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    background: var(--surface) !important;
+}
+[data-testid="stExpander"] summary {
+    font-family: 'Source Sans 3', sans-serif !important;
+    font-size: 0.75rem !important;
+    color: var(--dim) !important;
+    letter-spacing: 0.05em !important;
+}
+[data-testid="stExpander"] [data-testid="stTextInput"] input {
+    background: var(--bg) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+    color: var(--text) !important;
+    font-family: 'Source Sans 3', sans-serif !important;
+    font-size: 0.85rem !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+}
+
 /* === RESPONSIVE MOBILE === */
 @media (max-width: 768px) {
     .om-header { padding: 1.5rem 0.5rem 1rem; }
@@ -318,6 +367,30 @@ st.markdown(
     f'<div class="om-session">sesión {st.session_state.session_id[:8]} · turno {st.session_state.turno}</div>',
     unsafe_allow_html=True,
 )
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Identificador de usuario (inline, sin sidebar)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+with st.expander("👤 Identificarme", expanded=False):
+    user_code_input = st.text_input(
+        "Código de usuario",
+        label_visibility="collapsed",
+        placeholder="ej: JAVIER-01",
+        value=st.session_state.user_code,
+        key="user_code_input",
+    )
+    if user_code_input != st.session_state.user_code:
+        st.session_state.user_code = user_code_input.strip().upper()
+    if st.session_state.user_code:
+        st.markdown(
+            f'<div class="om-usercode-status om-uc-on">● Conectado como {st.session_state.user_code}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="om-usercode-status om-uc-off">Sin identificar — el historial no se guardará</div>',
+            unsafe_allow_html=True,
+        )
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
