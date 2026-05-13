@@ -174,7 +174,7 @@ button[kind="headerNoPadding"] { display: none !important; }
 
 .om-welcome {
     text-align: center;
-    padding: 4rem 2rem;
+    padding: 1.2rem 2rem;
 }
 .om-welcome-icon  { font-size: 2.5rem; color: var(--border); margin-bottom: 1rem; }
 .om-welcome-text  {
@@ -264,7 +264,7 @@ div[data-testid="stButton"] button:disabled {
    DASHBOARD — Panel derecho
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .dash-panel {
-    padding: 19rem 0 2rem;
+    padding: 2rem 0 2rem;
     font-family: 'Source Sans 3', sans-serif;
 }
 
@@ -742,6 +742,44 @@ if not st.session_state.session_id:
     st.session_state.session_id = nueva_sesion()
 
 
+# ── HEADER GLOBAL (fuera de columnas para alineación) ──────────────────────
+st.markdown(
+    '<div class="om-header">'
+    '<h1 class="om-title">ONTOMIND</h1>'
+    '<p class="om-subtitle">Crecimiento personal</p>'
+    '</div>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    f'<div class="om-session">sesión {st.session_state.session_id[:8]} · '
+    f'turno {st.session_state.turno}</div>',
+    unsafe_allow_html=True,
+)
+
+# Identificador de usuario (fuera de columnas)
+with st.expander("👤 Identificarme", expanded=False):
+    uci = st.text_input(
+        "Código de usuario",
+        label_visibility="collapsed",
+        placeholder="ej: JAVIER-01",
+        value=st.session_state.user_code,
+        key="user_code_input",
+    )
+    if uci != st.session_state.user_code:
+        st.session_state.user_code = uci.strip().upper()
+    if st.session_state.user_code:
+        st.markdown(
+            f'<div style="font-family:\'Source Sans 3\',sans-serif;font-size:0.65rem;'
+            f'color:#4ac17a;margin-top:0.2rem;">● Conectado como {st.session_state.user_code}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:0.65rem;'
+            'color:var(--dim);margin-top:0.2rem;">Sin identificar — el historial no se guardará</div>',
+            unsafe_allow_html=True,
+        )
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Layout: columna chat (izq) + dashboard (der)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -750,44 +788,6 @@ col_chat, col_dash = st.columns([3, 1.2], gap="small")
 # ── COLUMNA CHAT ──────────────────────────────────────
 with col_chat:
     st.markdown('<div class="chat-col">', unsafe_allow_html=True)
-
-    # Header
-    st.markdown(
-        '<div class="om-header">'
-        '<h1 class="om-title">ONTOMIND</h1>'
-        '<p class="om-subtitle">Crecimiento personal</p>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div class="om-session">sesión {st.session_state.session_id[:8]} · '
-        f'turno {st.session_state.turno}</div>',
-        unsafe_allow_html=True,
-    )
-
-    # Identificador de usuario
-    with st.expander("👤 Identificarme", expanded=False):
-        uci = st.text_input(
-            "Código de usuario",
-            label_visibility="collapsed",
-            placeholder="ej: JAVIER-01",
-            value=st.session_state.user_code,
-            key="user_code_input",
-        )
-        if uci != st.session_state.user_code:
-            st.session_state.user_code = uci.strip().upper()
-        if st.session_state.user_code:
-            st.markdown(
-                f'<div style="font-family:\'Source Sans 3\',sans-serif;font-size:0.65rem;'
-                f'color:#4ac17a;margin-top:0.2rem;">● Conectado como {st.session_state.user_code}</div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:0.65rem;'
-                'color:var(--dim);margin-top:0.2rem;">Sin identificar — el historial no se guardará</div>',
-                unsafe_allow_html=True,
-            )
 
     # Mensajes
     if not st.session_state.mensajes:
