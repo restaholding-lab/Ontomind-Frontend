@@ -264,7 +264,7 @@ div[data-testid="stButton"] button:disabled {
    DASHBOARD — Panel derecho
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .dash-panel {
-    padding: 2rem 0 2rem;
+    padding: 19rem 0 2rem;
     font-family: 'Source Sans 3', sans-serif;
 }
 
