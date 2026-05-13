@@ -194,7 +194,7 @@ button[kind="headerNoPadding"] { display: none !important; }
     font-style: italic !important;
 }
 
-/* === BOTÓN ENVIAR === */
+/* === BOTÓN ENVIAR (general) === */
 div[data-testid="stButton"] button {
     background: var(--accent) !important;
     border: none !important;
@@ -213,6 +213,31 @@ div[data-testid="stButton"] button:hover {
     background: var(--accent-soft) !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 12px rgba(212, 168, 85, 0.3) !important;
+}
+
+/* === BOTÓN ENVIAR — flecha dorada === */
+[data-testid="column"]:has(.send-col-marker) button {
+    font-size: 1.5rem !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-top: 4px !important;
+    box-shadow: 0 2px 8px rgba(212,168,85,0.4) !important;
+}
+[data-testid="column"]:has(.send-col-marker) button:hover {
+    background: var(--accent-soft) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 14px rgba(212,168,85,0.5) !important;
 }
 
 /* === SPACER === */
@@ -436,7 +461,7 @@ else:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 st.markdown('<div class="om-spacer"></div>', unsafe_allow_html=True)
 
-c1, c2 = st.columns([5, 1])
+c1, c2 = st.columns([8, 1])
 with c1:
     mensaje = st.text_area(
         "m",
@@ -446,8 +471,8 @@ with c1:
         key=f"i_{st.session_state.input_key}",
     )
 with c2:
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    enviar = st.button("Enviar", use_container_width=True)
+    st.markdown('<div class="send-col-marker"></div>', unsafe_allow_html=True)
+    enviar = st.button("↑", use_container_width=True)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
