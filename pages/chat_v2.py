@@ -45,9 +45,9 @@ st.markdown("""
     --text-soft:    #c0c0d0;
     --dim:          #8a8580;
     /* Dashboard inactivo */
-    --dash-dim:     #303038;
-    --dash-border:  #1e1e26;
-    --dash-text:    #3a3a48;
+    --dash-dim:     #484858;
+    --dash-border:  #2a2a36;
+    --dash-text:    #6a6a80;
 }
 
 /* === GLOBAL === */
@@ -205,7 +205,7 @@ button[kind="headerNoPadding"] { display: none !important; }
     font-style: italic !important;
 }
 
-/* === BOTÓN ENVIAR === */
+/* === BOTONES GENERALES (dashboard) === */
 div[data-testid="stButton"] button {
     background: var(--accent) !important;
     border: none !important;
@@ -231,6 +231,34 @@ div[data-testid="stButton"] button:disabled {
     transform: none !important;
     box-shadow: none !important;
     cursor: not-allowed !important;
+}
+
+/* === BOTÓN ENVIAR — flecha naranja === */
+.send-col-marker ~ div[data-testid="stButton"] button,
+:has(.send-col-marker) div[data-testid="stButton"] button {
+    background: #d4622a !important;
+    color: #ffffff !important;
+    font-size: 1.5rem !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-top: 4px !important;
+    box-shadow: 0 2px 8px rgba(212,98,42,0.4) !important;
+}
+:has(.send-col-marker) div[data-testid="stButton"] button:hover {
+    background: #e0732e !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 14px rgba(212,98,42,0.5) !important;
 }
 
 .om-spacer { height: 140px; }
@@ -281,7 +309,7 @@ div[data-testid="stButton"] button:disabled {
     transition: color 0.5s ease, border-color 0.5s ease;
 }
 .dash-title.active {
-    color: var(--dim);
+    color: #a0a0b8;
     border-color: var(--border);
 }
 
@@ -299,7 +327,7 @@ div[data-testid="stButton"] button:disabled {
     margin-bottom: 0.35rem;
     transition: color 0.5s ease;
 }
-.dash-enunciado-label.active { color: var(--dim); }
+.dash-enunciado-label.active { color: #a0a0b8; }
 
 .dash-enunciado-valor {
     font-size: 0.85rem;
@@ -347,7 +375,7 @@ div[data-testid="stButton"] button:disabled {
     margin-bottom: 0.8rem;
     transition: color 0.5s ease;
 }
-.dash-bar-label.active { color: var(--dim); }
+.dash-bar-label.active { color: #a0a0b8; }
 
 .dash-bar-track {
     position: relative;
@@ -380,7 +408,7 @@ div[data-testid="stButton"] button:disabled {
     line-height: 1.3;
     transition: color 0.5s ease;
 }
-.dash-bar-node.active   { color: #504a44; }
+.dash-bar-node.active   { color: #706a64; }
 .dash-bar-node.current  { color: var(--accent); font-weight: 600; }
 
 /* Bloque expandido: Lo que se movió / Semilla */
@@ -664,7 +692,7 @@ with col_chat:
 
     # Input
     st.markdown('<div class="om-spacer"></div>', unsafe_allow_html=True)
-    c1, c2 = st.columns([5, 1])
+    c1, c2 = st.columns([8, 1])
     with c1:
         mensaje = st.text_area(
             "m",
@@ -674,8 +702,8 @@ with col_chat:
             key=f"i_{st.session_state.input_key}",
         )
     with c2:
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        enviar = st.button("Enviar", use_container_width=True, key="btn_enviar")
+        st.markdown('<div class="send-col-marker"></div>', unsafe_allow_html=True)
+        enviar = st.button("↑", use_container_width=True, key="btn_enviar")
 
 
 # ══════════════════════════════════════════════════════
