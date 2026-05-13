@@ -742,46 +742,50 @@ if not st.session_state.session_id:
     st.session_state.session_id = nueva_sesion()
 
 
-# ── HEADER GLOBAL (fuera de columnas para alineación) ──────────────────────
-st.markdown(
-    '<div class="om-header">'
-    '<h1 class="om-title">ONTOMIND</h1>'
-    '<p class="om-subtitle">Crecimiento personal</p>'
-    '</div>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    f'<div class="om-session">sesión {st.session_state.session_id[:8]} · '
-    f'turno {st.session_state.turno}</div>',
-    unsafe_allow_html=True,
-)
-
-# Identificador de usuario (fuera de columnas)
-with st.expander("👤 Identificarme", expanded=False):
-    uci = st.text_input(
-        "Código de usuario",
-        label_visibility="collapsed",
-        placeholder="ej: JAVIER-01",
-        value=st.session_state.user_code,
-        key="user_code_input",
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# FILA 1 — Header (ocupa ambas columnas simétricamente)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+col_h, _ = st.columns([3, 1.2], gap="small")
+with col_h:
+    st.markdown(
+        '<div class="om-header">'
+        '<h1 class="om-title">ONTOMIND</h1>'
+        '<p class="om-subtitle">Crecimiento personal</p>'
+        '</div>',
+        unsafe_allow_html=True,
     )
-    if uci != st.session_state.user_code:
-        st.session_state.user_code = uci.strip().upper()
-    if st.session_state.user_code:
-        st.markdown(
-            f'<div style="font-family:\'Source Sans 3\',sans-serif;font-size:0.65rem;'
-            f'color:#4ac17a;margin-top:0.2rem;">● Conectado como {st.session_state.user_code}</div>',
-            unsafe_allow_html=True,
+    st.markdown(
+        f'<div class="om-session">sesión {st.session_state.session_id[:8]} · '
+        f'turno {st.session_state.turno}</div>',
+        unsafe_allow_html=True,
+    )
+    with st.expander("👤 Identificarme", expanded=False):
+        uci = st.text_input(
+            "Código de usuario",
+            label_visibility="collapsed",
+            placeholder="ej: JAVIER-01",
+            value=st.session_state.user_code,
+            key="user_code_input",
         )
-    else:
-        st.markdown(
-            '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:0.65rem;'
-            'color:var(--dim);margin-top:0.2rem;">Sin identificar — el historial no se guardará</div>',
-            unsafe_allow_html=True,
-        )
+        if uci != st.session_state.user_code:
+            st.session_state.user_code = uci.strip().upper()
+        if st.session_state.user_code:
+            st.markdown(
+                f'<div style="font-family:\'Source Sans 3\',sans-serif;font-size:0.65rem;'
+                f'color:#4ac17a;margin-top:0.2rem;">● Conectado como {st.session_state.user_code}</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:0.65rem;'
+                'color:var(--dim);margin-top:0.2rem;">Sin identificar — el historial no se guardará</div>',
+                unsafe_allow_html=True,
+            )
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Layout: columna chat (izq) + dashboard (der)
+# FILA 2 — Contenido: chat (izq) + dashboard (der)
+# Ambas columnas empiezan al mismo nivel — alineación natural
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 col_chat, col_dash = st.columns([3, 1.2], gap="small")
 
@@ -789,6 +793,7 @@ col_chat, col_dash = st.columns([3, 1.2], gap="small")
 with col_chat:
     st.markdown('<div class="chat-col">', unsafe_allow_html=True)
 
+    # Mensajes
     # Mensajes
     if not st.session_state.mensajes:
         st.markdown(
