@@ -205,7 +205,7 @@ button[kind="headerNoPadding"] { display: none !important; }
     font-style: italic !important;
 }
 
-/* === BOTONES GENERALES (dashboard) === */
+/* === BOTONES GENERALES (dashboard + valorar) === */
 div[data-testid="stButton"] button {
     background: var(--accent) !important;
     border: none !important;
@@ -218,6 +218,7 @@ div[data-testid="stButton"] button {
     padding: 0.6rem 1rem !important;
     border-radius: 8px !important;
     width: 100% !important;
+    min-height: 2.4rem !important;
     transition: all 0.2s ease !important;
 }
 div[data-testid="stButton"] button:hover {
@@ -236,8 +237,8 @@ div[data-testid="stButton"] button:disabled {
 /* === BOTÓN ENVIAR — flecha naranja === */
 .send-col-marker ~ div[data-testid="stButton"] button,
 :has(.send-col-marker) div[data-testid="stButton"] button {
-    background: #d4622a !important;
-    color: #ffffff !important;
+    background: var(--accent) !important;
+    color: #1a1a2e !important;
     font-size: 1.5rem !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
@@ -253,12 +254,12 @@ div[data-testid="stButton"] button:disabled {
     align-items: center !important;
     justify-content: center !important;
     margin-top: 4px !important;
-    box-shadow: 0 2px 8px rgba(212,98,42,0.4) !important;
+    box-shadow: 0 2px 8px rgba(212,168,85,0.4) !important;
 }
 :has(.send-col-marker) div[data-testid="stButton"] button:hover {
-    background: #e0732e !important;
+    background: var(--accent-soft) !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 4px 14px rgba(212,98,42,0.5) !important;
+    box-shadow: 0 4px 14px rgba(212,168,85,0.5) !important;
 }
 
 .om-spacer { height: 140px; }
