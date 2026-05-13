@@ -573,169 +573,6 @@ def dots_html_active(n=5):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Renderizado del dashboard
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-def render_dashboard(col, turno: int, ev: dict | None, valorada: bool, conf_pend: bool):
-    """Renderiza el panel derecho en todos sus estados."""
-    with col:
-        st.markdown('<div class="dash-panel">', unsafe_allow_html=True)
-
-        activo = turno >= 4
-
-        # ── Título ──────────────────────────────────────
-        titulo_cls = "dash-title active" if activo else "dash-title"
-        st.markdown(f'<div class="{titulo_cls}">SESIÓN EN CURSO</div>',
-                    unsafe_allow_html=True)
-
-        # ── 4 Enunciados ─────────────────────────────────
-        enunciados = [
-            ("Desde dónde llegaste",
-             POSICION_LABEL.get(ev.get("posicion_inicial",""), "—") if ev else None),
-            ("Hasta dónde llegaste",
-             POSICION_LABEL.get(ev.get("posicion_final",""), "—") if ev else None),
-            ("Lo que se abrió",
-             ev.get("llave_maestra_dominante","—") if ev else None),
-            ("Lo que se movió",
-             (ev.get("declaracion_texto","") or
-              ev.get("creencia_en_movimiento","") or "—") if ev else None),
-        ]
-
-        for label, valor in enunciados:
-            lbl_cls = "dash-enunciado-label active" if activo else "dash-enunciado-label"
-            if ev and valor:
-                val_cls = "dash-enunciado-valor gold" if label in ("Desde dónde llegaste","Hasta dónde llegaste") else "dash-enunciado-valor revealed"
-                val_html = f'<div class="{val_cls}">{_html.escape(str(valor))}</div>'
-            elif activo:
-                val_html = dots_html_active()
-            else:
-                val_html = dots_html()
-
-            st.markdown(
-                f'<div class="dash-enunciado">'
-                f'<div class="{lbl_cls}">{label}</div>'
-                f'{val_html}'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-        # ── Separador ────────────────────────────────────
-        sep_cls = "dash-sep active" if activo else "dash-sep"
-        st.markdown(f'<hr class="{sep_cls}">', unsafe_allow_html=True)
-
-        # ── Barra de progreso ─────────────────────────────
-        bar_lbl_cls = "dash-bar-label active" if activo else "dash-bar-label"
-        st.markdown(f'<div class="{bar_lbl_cls}">Progreso de sesión</div>',
-                    unsafe_allow_html=True)
-
-        score = ev.get("score_condiciones", 0) if ev else 0
-        pct   = porcentaje_barra(score) if ev else 0
-        idx   = nivel_actual(score) if ev else -1
-
-        track_cls = "dash-bar-track active" if activo else "dash-bar-track"
-        st.markdown(
-            f'<div class="{track_cls}">'
-            f'<div class="dash-bar-fill" style="width:{pct}%"></div>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-
-        # Nodos de la barra
-        nodos_html = '<div class="dash-bar-nodes">'
-        for i, (_, _, nombre) in enumerate(NIVELES):
-            node_cls = "dash-bar-node"
-            if ev and i == idx:
-                node_cls += " current"
-            elif activo:
-                node_cls += " active"
-            nodos_html += f'<div class="{node_cls}">{nombre}</div>'
-        nodos_html += '</div>'
-        st.markdown(nodos_html, unsafe_allow_html=True)
-
-        # ── Separador ────────────────────────────────────
-        sep_cls = "dash-sep active" if activo else "dash-sep"
-        st.markdown(f'<hr class="{sep_cls}">', unsafe_allow_html=True)
-
-        # ── Advertencia de confirmación ───────────────────
-        if conf_pend and not valorada:
-            st.markdown(
-                '<div class="dash-warning">'
-                '<strong>Solo puedes valorar una vez por sesión.</strong><br>'
-                'Pulsa confirmar cuando sientas que la conversación ha llegado '
-                'a su momento natural de cierre.'
-                '</div>',
-                unsafe_allow_html=True,
-            )
-            confirmar = st.button("Confirmar valoración", key="btn_confirmar",
-                                  use_container_width=True)
-            cancelar  = st.button("Cancelar", key="btn_cancelar",
-                                  use_container_width=True)
-            if confirmar:
-                with st.spinner(""):
-                    ev_result = evaluar_sesion(st.session_state.session_id)
-                st.session_state.evaluacion     = ev_result
-                st.session_state.valoracion_usada  = True
-                st.session_state.confirmacion_pend = False
-                st.rerun()
-            if cancelar:
-                st.session_state.confirmacion_pend = False
-                st.rerun()
-
-        # ── Botón principal ───────────────────────────────
-        elif not valorada and not conf_pend:
-            boton_activo = activo
-            if boton_activo:
-                valorar = st.button("Valorar sesión", key="btn_valorar",
-                                    use_container_width=True)
-                if valorar:
-                    st.session_state.confirmacion_pend = True
-                    st.rerun()
-            else:
-                st.button("Valorar sesión", key="btn_valorar_dis",
-                          use_container_width=True, disabled=True)
-                turnos_faltan = 4 - turno
-                st.markdown(
-                    f'<div style="text-align:center;font-size:0.62rem;'
-                    f'color:var(--dash-text);margin-top:0.4rem;letter-spacing:0.06em;">'
-                    f'Disponible en {turnos_faltan} turno{"s" if turnos_faltan!=1 else ""} más'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-
-        # ── Resultado revelado ────────────────────────────
-        elif valorada and ev:
-            st.markdown(
-                '<div style="text-align:center;font-size:0.62rem;color:#4a6a4a;'
-                'letter-spacing:0.1em;margin-bottom:1rem;">✓ SESIÓN VALORADA</div>',
-                unsafe_allow_html=True,
-            )
-
-            # Lo que se movió
-            movido = ev.get("declaracion_texto","") or ev.get("creencia_en_movimiento","")
-            if movido and movido not in ("no","—",""):
-                st.markdown(
-                    '<div class="dash-reveal">'
-                    '<div class="dash-reveal-block">'
-                    '<div class="dash-reveal-label">Lo que se movió</div>'
-                    f'<div class="dash-reveal-text">{_html.escape(movido)}</div>'
-                    '</div>',
-                    unsafe_allow_html=True,
-                )
-
-            # Semilla
-            semilla = ev.get("semilla_plantada","")
-            if semilla and semilla not in ("no","—",""):
-                st.markdown(
-                    '<div class="dash-reveal-block">'
-                    '<div class="dash-reveal-label">Semilla para esta semana</div>'
-                    f'<div class="dash-reveal-text semilla">{_html.escape(semilla)}</div>'
-                    '</div></div>',
-                    unsafe_allow_html=True,
-                )
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Inicializar sesión
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 if not st.session_state.session_id:
@@ -743,10 +580,16 @@ if not st.session_state.session_id:
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# FILA 1 — Header (ocupa ambas columnas simétricamente)
+# LAYOUT — columna chat (izq) + dashboard (der)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-col_h, _ = st.columns([3, 1.2], gap="small")
-with col_h:
+col_chat, col_dash = st.columns([3, 1.2], gap="small")
+
+# ══════════════════════════════════════════════════════
+# COLUMNA IZQUIERDA — Chat
+# ══════════════════════════════════════════════════════
+with col_chat:
+
+    # Header
     st.markdown(
         '<div class="om-header">'
         '<h1 class="om-title">ONTOMIND</h1>'
@@ -759,6 +602,8 @@ with col_h:
         f'turno {st.session_state.turno}</div>',
         unsafe_allow_html=True,
     )
+
+    # Identificador de usuario
     with st.expander("👤 Identificarme", expanded=False):
         uci = st.text_input(
             "Código de usuario",
@@ -782,18 +627,6 @@ with col_h:
                 unsafe_allow_html=True,
             )
 
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# FILA 2 — Contenido: chat (izq) + dashboard (der)
-# Ambas columnas empiezan al mismo nivel — alineación natural
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-col_chat, col_dash = st.columns([3, 1.2], gap="small")
-
-# ── COLUMNA CHAT ──────────────────────────────────────
-with col_chat:
-    st.markdown('<div class="chat-col">', unsafe_allow_html=True)
-
-    # Mensajes
     # Mensajes
     if not st.session_state.mensajes:
         st.markdown(
@@ -844,16 +677,146 @@ with col_chat:
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
         enviar = st.button("Enviar", use_container_width=True, key="btn_enviar")
 
+
+# ══════════════════════════════════════════════════════
+# COLUMNA DERECHA — Dashboard
+# ══════════════════════════════════════════════════════
+with col_dash:
+
+    activo = st.session_state.turno >= 4
+    ev     = st.session_state.evaluacion
+    valorada   = st.session_state.valoracion_usada
+    conf_pend  = st.session_state.confirmacion_pend
+
+    titulo_cls = "dash-title active" if activo else "dash-title"
+    st.markdown(f'<div class="dash-panel">', unsafe_allow_html=True)
+    st.markdown(f'<div class="{titulo_cls}">SESIÓN EN CURSO</div>', unsafe_allow_html=True)
+
+    # 4 Enunciados
+    enunciados = [
+        ("Desde dónde llegaste",
+         POSICION_LABEL.get(ev.get("posicion_inicial",""), "—") if ev else None),
+        ("Hasta dónde llegaste",
+         POSICION_LABEL.get(ev.get("posicion_final",""), "—") if ev else None),
+        ("Lo que se abrió",
+         ev.get("llave_maestra_dominante","—") if ev else None),
+        ("Lo que se movió",
+         (ev.get("declaracion_texto","") or ev.get("creencia_en_movimiento","") or "—") if ev else None),
+    ]
+    for label, valor in enunciados:
+        lbl_cls = "dash-enunciado-label active" if activo else "dash-enunciado-label"
+        if ev and valor:
+            col_cls = "dash-enunciado-valor gold" if label in ("Desde dónde llegaste","Hasta dónde llegaste") else "dash-enunciado-valor revealed"
+            val_html = f'<div class="{col_cls}">{_html.escape(str(valor))}</div>'
+        elif activo:
+            val_html = '<div class="dash-dots">' + '<div class="dash-dot active"></div>' * 5 + '</div>'
+        else:
+            val_html = '<div class="dash-dots">' + '<div class="dash-dot"></div>' * 5 + '</div>'
+        st.markdown(
+            f'<div class="dash-enunciado">'
+            f'<div class="{lbl_cls}">{label}</div>'
+            f'{val_html}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # Separador + barra
+    sep_cls = "dash-sep active" if activo else "dash-sep"
+    st.markdown(f'<hr class="{sep_cls}">', unsafe_allow_html=True)
+
+    bar_lbl_cls = "dash-bar-label active" if activo else "dash-bar-label"
+    st.markdown(f'<div class="{bar_lbl_cls}">Progreso de sesión</div>', unsafe_allow_html=True)
+
+    score = ev.get("score_condiciones", 0) if ev else 0
+    pct   = max(10.0, min(100.0, score)) if ev else 0
+    idx_n = nivel_actual(score) if ev else -1
+
+    track_cls = "dash-bar-track active" if activo else "dash-bar-track"
+    st.markdown(
+        f'<div class="{track_cls}">'
+        f'<div class="dash-bar-fill" style="width:{pct}%"></div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    nodos_html = '<div class="dash-bar-nodes">'
+    for i, (_, _, nombre) in enumerate(NIVELES):
+        node_cls = "dash-bar-node"
+        if ev and i == idx_n:
+            node_cls += " current"
+        elif activo:
+            node_cls += " active"
+        nodos_html += f'<div class="{node_cls}">{nombre}</div>'
+    nodos_html += '</div>'
+    st.markdown(nodos_html, unsafe_allow_html=True)
+
+    sep_cls = "dash-sep active" if activo else "dash-sep"
+    st.markdown(f'<hr class="{sep_cls}">', unsafe_allow_html=True)
+
+    # Botón / confirmación / resultado
+    if conf_pend and not valorada:
+        st.markdown(
+            '<div class="dash-warning">'
+            '<strong>Solo puedes valorar una vez por sesión.</strong><br>'
+            'Pulsa confirmar cuando sientas que la conversación ha llegado '
+            'a su momento natural de cierre.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("Confirmar valoración", key="btn_confirmar", use_container_width=True):
+            with st.spinner(""):
+                ev_result = evaluar_sesion(st.session_state.session_id)
+            st.session_state.evaluacion        = ev_result
+            st.session_state.valoracion_usada  = True
+            st.session_state.confirmacion_pend = False
+            st.rerun()
+        if st.button("Cancelar", key="btn_cancelar", use_container_width=True):
+            st.session_state.confirmacion_pend = False
+            st.rerun()
+
+    elif not valorada and not conf_pend:
+        if activo:
+            if st.button("Valorar sesión", key="btn_valorar", use_container_width=True):
+                st.session_state.confirmacion_pend = True
+                st.rerun()
+        else:
+            st.button("Valorar sesión", key="btn_valorar_dis",
+                      use_container_width=True, disabled=True)
+            turnos_faltan = 4 - st.session_state.turno
+            st.markdown(
+                f'<div style="text-align:center;font-size:0.62rem;'
+                f'color:var(--dash-text);margin-top:0.4rem;letter-spacing:0.06em;">'
+                f'Disponible en {turnos_faltan} turno{"s" if turnos_faltan!=1 else ""} más'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    elif valorada and ev:
+        st.markdown(
+            '<div style="text-align:center;font-size:0.62rem;color:#4a6a4a;'
+            'letter-spacing:0.1em;margin-bottom:1rem;">✓ SESIÓN VALORADA</div>',
+            unsafe_allow_html=True,
+        )
+        movido = ev.get("declaracion_texto","") or ev.get("creencia_en_movimiento","")
+        if movido and movido not in ("no","—",""):
+            st.markdown(
+                '<div class="dash-reveal"><div class="dash-reveal-block">'
+                '<div class="dash-reveal-label">Lo que se movió</div>'
+                f'<div class="dash-reveal-text">{_html.escape(movido)}</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        semilla = ev.get("semilla_plantada","")
+        if semilla and semilla not in ("no","—",""):
+            st.markdown(
+                '<div class="dash-reveal-block">'
+                '<div class="dash-reveal-label">Semilla para esta semana</div>'
+                f'<div class="dash-reveal-text semilla">{_html.escape(semilla)}</div>'
+                '</div></div>',
+                unsafe_allow_html=True,
+            )
+
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ── COLUMNA DASHBOARD ──────────────────────────────────
-render_dashboard(
-    col         = col_dash,
-    turno       = st.session_state.turno,
-    ev          = st.session_state.evaluacion,
-    valorada    = st.session_state.valoracion_usada,
-    conf_pend   = st.session_state.confirmacion_pend,
-)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Enviar mensaje
@@ -865,9 +828,9 @@ if enviar and mensaje and mensaje.strip():
         res = chat(st.session_state.session_id, t, st.session_state.user_code)
     respuesta = res.get("respuesta", "").replace("——", "—")
     st.session_state.mensajes.append({
-        "rol":       "agent",
-        "contenido":  respuesta,
-        "protocolo":  res.get("protocolo", "normal"),
+        "rol":      "agent",
+        "contenido": respuesta,
+        "protocolo": res.get("protocolo", "normal"),
     })
     st.session_state.turno = res.get("turno", st.session_state.turno + 1)
     st.session_state.input_key += 1
