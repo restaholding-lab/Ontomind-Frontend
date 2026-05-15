@@ -35,11 +35,11 @@ html,body,[data-testid="stAppViewContainer"]{background:var(--bg)!important;colo
 </style>""", unsafe_allow_html=True)
 
 
+@st.cache_data(ttl=20)
 def sb(tabla, params="", limit=100):
-    import urllib.parse, time
+    import urllib.parse
     try:
-        ts = int(time.time())
-        url = f"{API_URL}/admin/tabla/{tabla}?limit={limit}&_ts={ts}"
+        url = f"{API_URL}/admin/tabla/{tabla}?limit={limit}"
         if params:
             url += "&params=" + urllib.parse.quote(params)
         r = httpx.get(url, timeout=15)
@@ -53,6 +53,7 @@ def sb(tabla, params="", limit=100):
         st.error(f"Error cargando {tabla}: {e}")
         return []
 
+@st.cache_data(ttl=30)
 def sb_count(tabla, params=""):
     """Cuenta total real de filas sin límite de paginación."""
     import urllib.parse
