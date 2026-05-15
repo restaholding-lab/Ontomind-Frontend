@@ -103,8 +103,10 @@ def api_ok():
 with st.sidebar:
     st.markdown("**◈ ONTOMIND**")
     st.markdown("---")
-    vista = st.radio("Vista", ["Resumen","Usuarios","Conversaciones","Log de Nodos","Etiquetado DPO","Alertas VIGIL","Sesiones","Consultar sesion"],
-                     label_visibility="collapsed")
+    VISTAS = ["Resumen","Usuarios","Conversaciones","Log de Nodos","Etiquetado DPO","Alertas VIGIL","Sesiones","Consultar sesion"]
+    if "vista_radio" not in st.session_state:
+        st.session_state["vista_radio"] = "Resumen"
+    vista = st.radio("Vista", VISTAS, label_visibility="collapsed", key="vista_radio")
     st.markdown("---")
     if st.button("Actualizar", type="primary"): st.cache_data.clear(); st.rerun()
     ok=api_ok()
@@ -378,7 +380,7 @@ elif vista == "Conversaciones":
                 with link_cols[0]:
                     if st.button("≡ Ver conversación", key=f"ver_{conv_idx}_{full_sid[:12]}"):
                         st.session_state["consultar_sid"] = full_sid
-                        st.session_state["_goto_consultar"] = True
+                        st.session_state["vista_radio"] = "Consultar sesion"
                         st.rerun()
                 with link_cols[1]:
                     st.markdown(f'<div style="font-size:0.6rem;color:#3a4060;padding-top:0.6rem;word-break:break-all">{full_sid}</div>', unsafe_allow_html=True)
@@ -734,15 +736,12 @@ elif vista == "Sesiones":
             with sl:
                 if st.button("≡", key=f"ses_{ses_idx}_{sid_full[:12]}", help="Ver conversación"):
                     st.session_state["consultar_sid"] = sid_full
-                    st.session_state["_goto_consultar"] = True
+                    st.session_state["vista_radio"] = "Consultar sesion"
                     st.rerun()
 
 
 elif vista == "Consultar sesion":
     # Autorellenar desde botón "Ver conversación"
-    if st.session_state.get("_goto_consultar"):
-        st.session_state["_goto_consultar"] = False
-
     st.markdown("### Consultar sesión específica")
     default_sid = st.session_state.get("consultar_sid", "")
     sid = st.text_input("Session ID", value=default_sid,
