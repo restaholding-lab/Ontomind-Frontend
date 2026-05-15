@@ -106,6 +106,9 @@ with st.sidebar:
     VISTAS = ["Resumen","Usuarios","Conversaciones","Log de Nodos","Etiquetado DPO","Alertas VIGIL","Sesiones","Consultar sesion"]
     if "vista_radio" not in st.session_state:
         st.session_state["vista_radio"] = "Resumen"
+    # Aplicar navegación pendiente ANTES de crear el widget
+    if st.session_state.get("_nav_pending"):
+        st.session_state["vista_radio"] = st.session_state.pop("_nav_pending")
     vista = st.radio("Vista", VISTAS, label_visibility="collapsed", key="vista_radio")
     st.markdown("---")
     if st.button("Actualizar", type="primary"): st.cache_data.clear(); st.rerun()
@@ -380,7 +383,7 @@ elif vista == "Conversaciones":
                 with link_cols[0]:
                     if st.button("≡ Ver conversación", key=f"ver_{conv_idx}_{full_sid[:12]}"):
                         st.session_state["consultar_sid"] = full_sid
-                        st.session_state["vista_radio"] = "Consultar sesion"
+                        st.session_state["_nav_pending"] = "Consultar sesion"
                         st.rerun()
                 with link_cols[1]:
                     st.markdown(f'<div style="font-size:0.6rem;color:#3a4060;padding-top:0.6rem;word-break:break-all">{full_sid}</div>', unsafe_allow_html=True)
@@ -736,7 +739,7 @@ elif vista == "Sesiones":
             with sl:
                 if st.button("≡", key=f"ses_{ses_idx}_{sid_full[:12]}", help="Ver conversación"):
                     st.session_state["consultar_sid"] = sid_full
-                    st.session_state["vista_radio"] = "Consultar sesion"
+                    st.session_state["_nav_pending"] = "Consultar sesion"
                     st.rerun()
 
 
