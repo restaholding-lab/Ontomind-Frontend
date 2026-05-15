@@ -38,7 +38,6 @@ html,body,[data-testid="stAppViewContainer"]{background:var(--bg)!important;colo
 def sb(tabla, params="", limit=100):
     import urllib.parse, time
     try:
-        # Añadir timestamp para evitar cache
         ts = int(time.time())
         url = f"{API_URL}/admin/tabla/{tabla}?limit={limit}&_ts={ts}"
         if params:
@@ -53,6 +52,26 @@ def sb(tabla, params="", limit=100):
     except Exception as e:
         st.error(f"Error cargando {tabla}: {e}")
         return []
+
+def sb_count(tabla, params=""):
+    """Cuenta total real de filas sin límite de paginación."""
+    import urllib.parse
+    try:
+        url = f"{SUPABASE_URL.strip()}/rest/v1/{tabla}?select=id"
+        if params:
+            url += "&" + params
+        r = httpx.get(url, headers={
+            "apikey": SUPABASE_KEY.strip(),
+            "Authorization": f"Bearer {SUPABASE_KEY.strip()}",
+            "Prefer": "count=exact",
+            "Range": "0-0",
+        }, timeout=10)
+        cr = r.headers.get("content-range", "")
+        if "/" in cr:
+            return int(cr.split("/")[-1])
+        return None
+    except:
+        return None
 
 def pj(v):
     if isinstance(v,dict): return v
@@ -98,11 +117,14 @@ st.markdown('<div style="font-family:Cormorant Garamond,serif;font-size:1.6rem;c
 if vista == "Resumen":
     mapas=sb("mapa_observador","order=updated_at.desc")
     alertas=sb("alertas_vigil","revisado=eq.false")
+    # Contadores reales (sin límite de paginación)
+    total_sesiones  = sb_count("mapa_observador") or len(mapas)
+    total_alertas   = sb_count("alertas_vigil", "revisado=eq.false") or len(alertas)
     logs=sb("log_nodos","order=timestamp.desc",limit=500)
     protags=[m for m in mapas if m.get("ultima_posicion")=="protagonista"]
     ancoras=[m for m in mapas if m.get("ancora_activado")]
     c1,c2,c3,c4=st.columns(4)
-    for col,val,lbl,color in [(c1,len(mapas),"Sesiones","#4a7fc1"),(c2,len(alertas),"Alertas VIGIL","#c14a4a"),
+    for col,val,lbl,color in [(c1,total_sesiones,"Sesiones","#4a7fc1"),(c2,total_alertas,"Alertas VIGIL","#c14a4a"),
         (c3,f"{round(len(protags)/len(mapas)*100) if mapas else 0}%","Protagonismo","#4ac17a"),(c4,len(ancoras),"ANCORA","#c14a4a")]:
         with col:
             st.markdown(f'<div class="mc"><div class="mv" style="color:{color}">{val}</div><div class="ml">{lbl}</div></div>',unsafe_allow_html=True)
@@ -140,7 +162,7 @@ elif vista == "Usuarios":
     st.markdown('<div style="font-size:0.7rem;color:#5a6280;margin-bottom:1.2rem;line-height:1.6;">Evolución longitudinal de cada usuario a lo largo de todas sus conversaciones.<br>Permite identificar patrones recurrentes, velocidad de transformación y temas dominantes.</div>', unsafe_allow_html=True)
 
     # Cargar todas las evaluaciones de conversacion
-    convs_all = sb("evaluaciones_conversacion", "order=timestamp.asc", limit=500)
+    convs_all = sb("evaluaciones_conversacion", "order=timestamp.desc", limit=500)
 
     if not convs_all:
         st.info("No hay usuarios con historial aun. Los datos apareceran cuando los usuarios realicen multiples sesiones con su codigo.")
@@ -350,9 +372,16 @@ elif vista == "Conversaciones":
                     st.markdown(f'<div style="background:#1a2a1a;border-left:3px solid #4ac17a;border-radius:0 6px 6px 0;padding:0.8rem 1rem;margin:0.5rem 0;font-family:Cormorant Garamond,serif;font-size:1rem;color:#e8e4dc;font-style:italic;">"{decl_texto}"</div>', unsafe_allow_html=True)
 
                 # Detalles
-                # Session ID completo
+                # Session ID — link a consultar sesión (izquierda para móvil)
                 full_sid = conv.get("session_id","")
-                st.code(full_sid, language=None)
+                link_cols = st.columns([2, 3])
+                with link_cols[0]:
+                    if st.button("🔍 Ver conversación", key=f"ver_{full_sid[:8]}"):
+                        st.session_state["consultar_sid"] = full_sid
+                        st.session_state["_goto_consultar"] = True
+                        st.rerun()
+                with link_cols[1]:
+                    st.markdown(f'<div style="font-size:0.6rem;color:#3a4060;padding-top:0.6rem;word-break:break-all">{full_sid}</div>', unsafe_allow_html=True)
 
                 col_a, col_b = st.columns(2)
                 with col_a:
@@ -677,40 +706,97 @@ elif vista == "Alertas VIGIL":
 
 
 elif vista == "Sesiones":
-    st.markdown("### Mapa del Observador")
-    mapas=sb("mapa_observador","order=updated_at.desc",limit=100)
+    st.markdown("### Mapa del Observador — Últimas sesiones")
+    total_s = sb_count("mapa_observador")
+    mapas=sb("mapa_observador","order=updated_at.desc",limit=200)
     if not mapas:
         st.info("No hay sesiones aun.")
     else:
-        st.markdown(f"**{len(mapas)} sesion(es)**")
+        count_lbl = f"{total_s} sesion(es) totales" if total_s else f"{len(mapas)} sesion(es)"
+        st.markdown(f'<div style="font-size:0.7rem;color:#4a7fc1;margin-bottom:0.8rem">{count_lbl} · mostrando las 200 más recientes</div>', unsafe_allow_html=True)
         for m in mapas:
-            pos=m.get("ultima_posicion","desconocido"); pc=POSC.get(pos,"#5a6280")
-            ancora="ANCORA" if m.get("ancora_activado") else ""
-            st.markdown(f'<div style="background:var(--s);border:1px solid var(--b);border-radius:6px;padding:0.6rem 1rem;margin:0.3rem 0;display:flex;gap:2rem;font-size:0.7rem;">'
-                       f'<span style="color:#3a5080">{m.get("session_id","")[:12]}...</span>'
-                       f'<span style="color:{pc};font-weight:500">{pos}</span>'
-                       f'<span style="color:#5a6280">{m.get("ultimo_quiebre","—")}</span>'
-                       f'<span style="color:#c14a4a">{ancora}</span>'
-                       f'<span style="color:#3a4060;margin-left:auto">{m.get("updated_at","")[:16]}</span></div>',unsafe_allow_html=True)
+            sid_full = m.get("session_id","")
+            pos = m.get("ultima_posicion","desconocido")
+            pc  = POSC.get(pos,"#8a9ab0")
+            ancora = "ANCORA" if m.get("ancora_activado") else ""
+            quiebre = m.get("ultimo_quiebre","—") or "—"
+            ts = m.get("updated_at","")[:16]
+            sr, sl = st.columns([5, 1])
+            with sr:
+                st.markdown(
+                    f'<div style="background:var(--s);border:1px solid var(--b);border-radius:6px;padding:0.55rem 1rem;margin:0.2rem 0;display:flex;gap:1.5rem;align-items:center;font-size:0.7rem;">'
+                    f'<span style="color:#6a7aaa;font-family:DM Mono,monospace">{sid_full[:12]}…</span>'
+                    f'<span style="color:{pc};font-weight:600">{pos}</span>'
+                    f'<span style="color:#7a8090">{quiebre}</span>'
+                    f'{"<span style=\"color:#c14a4a\">ANCORA</span>" if ancora else ""}'
+                    f'<span style="color:#5a6280;margin-left:auto">{ts}</span>'
+                    f'</div>', unsafe_allow_html=True)
+            with sl:
+                if st.button("🔍", key=f"ses_{sid_full[:8]}", help="Ver conversación"):
+                    st.session_state["consultar_sid"] = sid_full
+                    st.session_state["_goto_consultar"] = True
+                    st.rerun()
 
 
 elif vista == "Consultar sesion":
-    st.markdown("### Consultar sesion especifica")
-    sid=st.text_input("Session ID",placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
-    if sid and len(sid)>8:
-        c1,c2=st.columns(2)
+    # Autorellenar desde botón "Ver conversación"
+    if st.session_state.get("_goto_consultar"):
+        st.session_state["_goto_consultar"] = False
+
+    st.markdown("### Consultar sesión específica")
+    default_sid = st.session_state.get("consultar_sid", "")
+    sid = st.text_input("Session ID", value=default_sid,
+                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+    if sid:
+        st.session_state["consultar_sid"] = sid
+
+    if sid and len(sid) > 8:
+        c1, c2 = st.columns([1, 2])
         with c1:
             st.markdown("**Mapa del Observador**")
             try:
-                r=httpx.get(f"{API_URL}/sesion/{sid}/mapa",timeout=10)
-                if r.status_code==200: st.json(r.json().get("mapa",{}))
-            except Exception as e: st.error(str(e))
+                r = httpx.get(f"{API_URL}/sesion/{sid}/mapa", timeout=10)
+                if r.status_code == 200:
+                    st.json(r.json().get("mapa", {}))
+            except Exception as e:
+                st.error(str(e))
         with c2:
-            st.markdown("**Historial**")
+            st.markdown("**Historial de conversación**")
+            mensajes = []
+            # Primero intentar Redis vía API
             try:
-                r=httpx.get(f"{API_URL}/sesion/{sid}/historial",timeout=10)
-                if r.status_code==200:
-                    for msg in r.json().get("mensajes",[]):
-                        st.markdown(f"**{'Tu' if msg['rol']=='user' else 'ONTOMIND'}:** {msg['contenido']}")
-                        st.markdown("---")
-            except Exception as e: st.error(str(e))
+                r = httpx.get(f"{API_URL}/sesion/{sid}/historial", timeout=10)
+                if r.status_code == 200:
+                    mensajes = r.json().get("mensajes", [])
+            except:
+                pass
+
+            # Fallback: reconstruir desde log_nodos en Supabase
+            if not mensajes:
+                try:
+                    logs_hist = sb("log_nodos",
+                                   f"session_id=eq.{sid}&order=turno.asc", limit=60)
+                    for log in logs_hist:
+                        ui = log.get("user_input", "")
+                        re = log.get("respuesta", "")
+                        if ui:
+                            mensajes.append({"rol": "user",    "contenido": ui})
+                        if re:
+                            mensajes.append({"rol": "agent",   "contenido": re})
+                except:
+                    pass
+
+            if mensajes:
+                for msg in mensajes:
+                    rol = msg.get("rol", "")
+                    contenido = msg.get("contenido", "")
+                    if rol == "user":
+                        st.markdown(
+                            f'<div class="ui-box"><span style="font-size:0.6rem;color:#5a6280;display:block;margin-bottom:0.3rem">TÚ</span>{contenido}</div>',
+                            unsafe_allow_html=True)
+                    else:
+                        st.markdown(
+                            f'<div class="re-box"><span style="font-size:0.6rem;color:#4a7fc1;display:block;margin-bottom:0.3rem">ONTOMIND</span>{contenido}</div>',
+                            unsafe_allow_html=True)
+            else:
+                st.info("Historial no disponible — la sesión puede haber expirado de Redis y no tiene turnos en log_nodos.")
