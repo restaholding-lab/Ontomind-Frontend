@@ -325,7 +325,7 @@ elif vista == "Conversaciones":
             if score >= 21: return "CONCIENCIA"
             return "SUPERVIVENCIA"
 
-        for conv in convs:
+        for conv_idx, conv in enumerate(convs):
             score = conv.get("score_condiciones", 0)
             arco  = conv.get("arco_detectado", "estable")
             user  = conv.get("user_code", "anonimo")
@@ -376,7 +376,7 @@ elif vista == "Conversaciones":
                 full_sid = conv.get("session_id","")
                 link_cols = st.columns([2, 3])
                 with link_cols[0]:
-                    if st.button("🔍 Ver conversación", key=f"ver_{full_sid[:8]}"):
+                    if st.button("≡ Ver conversación", key=f"ver_{conv_idx}_{full_sid[:12]}"):
                         st.session_state["consultar_sid"] = full_sid
                         st.session_state["_goto_consultar"] = True
                         st.rerun()
@@ -714,7 +714,7 @@ elif vista == "Sesiones":
     else:
         count_lbl = f"{total_s} sesion(es) totales" if total_s else f"{len(mapas)} sesion(es)"
         st.markdown(f'<div style="font-size:0.7rem;color:#4a7fc1;margin-bottom:0.8rem">{count_lbl} · mostrando las 200 más recientes</div>', unsafe_allow_html=True)
-        for m in mapas:
+        for ses_idx, m in enumerate(mapas):
             sid_full = m.get("session_id","")
             pos = m.get("ultima_posicion","desconocido")
             pc  = POSC.get(pos,"#8a9ab0")
@@ -732,7 +732,7 @@ elif vista == "Sesiones":
                     f'<span style="color:#5a6280;margin-left:auto">{ts}</span>'
                     f'</div>', unsafe_allow_html=True)
             with sl:
-                if st.button("🔍", key=f"ses_{sid_full[:8]}", help="Ver conversación"):
+                if st.button("≡", key=f"ses_{ses_idx}_{sid_full[:12]}", help="Ver conversación"):
                     st.session_state["consultar_sid"] = sid_full
                     st.session_state["_goto_consultar"] = True
                     st.rerun()
