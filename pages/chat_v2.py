@@ -460,6 +460,141 @@ div[data-testid="stButton"] button:disabled {
 }
 .dash-warning strong { color: var(--accent); }
 
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GOLD — Historial de transformación
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.gold-section {
+    margin-top: 1.2rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--accent);
+    animation: fadeIn 0.5s ease;
+}
+.gold-badge {
+    display: inline-block;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    background: rgba(212,168,85,0.1);
+    border: 1px solid rgba(212,168,85,0.3);
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-bottom: 1rem;
+}
+.gold-subtitle {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 1.2rem 0 0.6rem;
+}
+.gold-prev-box {
+    background: rgba(212,168,85,0.05);
+    border: 1px solid rgba(212,168,85,0.15);
+    border-radius: 8px;
+    padding: 0.8rem;
+    margin-bottom: 0.8rem;
+}
+.gold-prev-label {
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--dim);
+    margin-bottom: 0.4rem;
+}
+.gold-prev-text {
+    font-family: 'Libre Baskerville', Georgia, serif;
+    font-size: 0.78rem;
+    color: var(--text-soft);
+    line-height: 1.6;
+    font-style: italic;
+}
+/* Mini chart - bars */
+.gold-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 50px;
+    margin: 0.6rem 0;
+    padding: 0 2px;
+}
+.gold-bar {
+    flex: 1;
+    min-width: 8px;
+    max-width: 18px;
+    border-radius: 2px 2px 0 0;
+    transition: all 0.3s ease;
+    position: relative;
+}
+.gold-bar:hover { opacity: 0.8; }
+.gold-bar-s0 { background: #4a3a3a; } /* supervivencia */
+.gold-bar-s1 { background: #5a4a30; } /* brecha */
+.gold-bar-s2 { background: #3a5a3a; } /* exploración */
+.gold-bar-s3 { background: #3a5a6a; } /* declaración */
+.gold-bar-s4 { background: var(--accent); } /* compromiso */
+.gold-chart-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.48rem;
+    color: var(--dash-text);
+    margin-top: 0.2rem;
+}
+/* Declaration list */
+.gold-decl {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.72rem;
+    color: var(--text-soft);
+    line-height: 1.5;
+    border-left: 2px solid var(--accent);
+    padding: 0.3rem 0 0.3rem 0.6rem;
+    margin-bottom: 0.5rem;
+}
+.gold-decl-date {
+    font-size: 0.5rem;
+    color: var(--dim);
+    margin-bottom: 0.15rem;
+}
+.gold-seed {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.72rem;
+    color: var(--text-soft);
+    line-height: 1.5;
+    border-left: 2px solid var(--accent2);
+    padding: 0.3rem 0 0.3rem 0.6rem;
+    margin-bottom: 0.5rem;
+    font-style: italic;
+}
+.gold-empty {
+    font-size: 0.65rem;
+    color: var(--dash-text);
+    font-style: italic;
+    padding: 0.5rem 0;
+}
+.gold-upgrade {
+    margin-top: 1.2rem;
+    padding: 0.8rem;
+    border: 1px dashed rgba(212,168,85,0.3);
+    border-radius: 8px;
+    text-align: center;
+}
+.gold-upgrade-text {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.68rem;
+    color: var(--dim);
+    line-height: 1.6;
+}
+.gold-upgrade-cta {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-top: 0.4rem;
+}
+
 @media (max-width: 768px) {
     .chat-col { padding: 0 1rem; }
     .dash-col  { padding: 1.5rem 1rem; border-top: 1px solid var(--border); }
@@ -481,6 +616,8 @@ DEFAULTS = {
     "valoracion_usada":    False,   # True cuando el usuario confirmó
     "confirmacion_pend":   False,   # True cuando mostrar advertencia
     "evaluacion":          None,    # Dict con resultado del evaluador
+    "user_plan":           "free",  # free | gold
+    "user_history":        None,    # Lista de evaluaciones pasadas (GOLD)
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
@@ -551,6 +688,48 @@ def evaluar_sesion(session_id: str) -> dict:
             "_error": str(e),
         }
 
+
+
+def cargar_plan_usuario(user_code: str) -> tuple:
+    """Carga plan + historial del usuario desde el backend proxy."""
+    if not user_code or user_code == "anonimo":
+        return "free", []
+    try:
+        # Plan
+        r = httpx.get(
+            f"{API_URL}/admin/tabla/usuarios?limit=1"
+            f"&params=user_code%3Deq.{user_code}%26select%3Dplan%2Cultimo_resumen",
+            timeout=8,
+        )
+        plan = "free"
+        resumen_prev = ""
+        if r.status_code == 200:
+            data = r.json()
+            if data and isinstance(data, list) and data[0]:
+                plan = data[0].get("plan", "free") or "free"
+                resumen_prev = data[0].get("ultimo_resumen", "") or ""
+
+        if plan != "gold":
+            return plan, []
+
+        # Historial de evaluaciones (solo GOLD)
+        r2 = httpx.get(
+            f"{API_URL}/admin/tabla/evaluaciones_conversacion?limit=20"
+            f"&params=user_code%3Deq.{user_code}%26order%3Dtimestamp.desc",
+            timeout=8,
+        )
+        historial = []
+        if r2.status_code == 200:
+            historial = r2.json() if isinstance(r2.json(), list) else []
+
+        # Inyectar resumen previo en la primera entrada si existe
+        if historial and resumen_prev:
+            historial[0]["_resumen_previo"] = resumen_prev
+
+        return plan, historial
+    except Exception as e:
+        print(f"[GOLD] Error: {e}")
+        return "free", []
 
 def badge(protocolo):
     css_map = {
@@ -644,9 +823,16 @@ with col_chat:
         if uci != st.session_state.user_code:
             st.session_state.user_code = uci.strip().upper()
         if st.session_state.user_code:
+            # Cargar plan y historial
+            if st.session_state.get("_plan_loaded") != st.session_state.user_code:
+                plan, hist = cargar_plan_usuario(st.session_state.user_code)
+                st.session_state.user_plan = plan
+                st.session_state.user_history = hist
+                st.session_state["_plan_loaded"] = st.session_state.user_code
+            plan_badge = " · GOLD ◈" if st.session_state.user_plan == "gold" else ""
             st.markdown(
                 f'<div style="font-family:\'Source Sans 3\',sans-serif;font-size:0.65rem;'
-                f'color:#4ac17a;margin-top:0.2rem;">● Conectado como {st.session_state.user_code}</div>',
+                f'color:#4ac17a;margin-top:0.2rem;">● Conectado como {st.session_state.user_code}{plan_badge}</div>',
                 unsafe_allow_html=True,
             )
         else:
@@ -845,6 +1031,97 @@ with col_dash:
             )
 
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── GOLD — Historial de transformación ──────────────────
+    if st.session_state.user_plan == "gold" and st.session_state.user_history:
+        hist = st.session_state.user_history
+        st.markdown('<div class="gold-section">', unsafe_allow_html=True)
+        st.markdown('<span class="gold-badge">GOLD ◈ HISTORIAL</span>', unsafe_allow_html=True)
+
+        # Última sesión — resumen
+        if hist and hist[0].get("_resumen_previo"):
+            st.markdown(
+                '<div class="gold-prev-box">'
+                '<div class="gold-prev-label">TU ÚLTIMA SESIÓN</div>'
+                f'<div class="gold-prev-text">{_html.escape(hist[0]["_resumen_previo"])}</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Mini chart de progreso
+        if len(hist) > 1:
+            st.markdown('<div class="gold-subtitle">EVOLUCIÓN</div>', unsafe_allow_html=True)
+            sessions = list(reversed(hist[:15]))  # cronológico, max 15
+            bars_html = '<div class="gold-chart">'
+            for s in sessions:
+                sc = s.get("score_condiciones", 0) or 0
+                h_pct = max(8, int(sc * 50 / 100))
+                nivel_idx = 0
+                if sc > 80: nivel_idx = 4
+                elif sc > 60: nivel_idx = 3
+                elif sc > 40: nivel_idx = 2
+                elif sc > 20: nivel_idx = 1
+                ts_short = (s.get("timestamp","")[:10]) if s.get("timestamp") else ""
+                bars_html += (
+                    f'<div class="gold-bar gold-bar-s{nivel_idx}" '
+                    f'style="height:{h_pct}px" title="{ts_short}: {sc}pts"></div>'
+                )
+            bars_html += '</div>'
+            # Labels
+            first_date = sessions[0].get("timestamp","")[:5] if sessions else ""
+            last_date  = sessions[-1].get("timestamp","")[:5] if sessions else ""
+            bars_html += f'<div class="gold-chart-labels"><span>{first_date}</span><span>{last_date}</span></div>'
+            st.markdown(bars_html, unsafe_allow_html=True)
+
+        # Declaraciones emergentes
+        decls = [
+            s for s in hist
+            if s.get("declaracion_detectada") and s.get("declaracion_texto")
+            and s["declaracion_texto"] not in ("", "no", "—")
+        ]
+        if decls:
+            st.markdown('<div class="gold-subtitle">TUS DECLARACIONES</div>', unsafe_allow_html=True)
+            for d in decls[:8]:
+                ts = d.get("timestamp","")[:10]
+                txt = _html.escape(d["declaracion_texto"][:200])
+                st.markdown(
+                    f'<div class="gold-decl">'
+                    f'<div class="gold-decl-date">{ts}</div>'
+                    f'{txt}</div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                '<div class="gold-empty">Aún no hay declaraciones registradas. '
+                'Aparecerán cuando algo se mueva en tus sesiones.</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Semillas plantadas
+        seeds = [
+            s for s in hist
+            if s.get("semilla_plantada") and s["semilla_plantada"] not in ("", "no", "—")
+        ]
+        if seeds:
+            st.markdown('<div class="gold-subtitle">SEMILLAS PLANTADAS</div>', unsafe_allow_html=True)
+            for s in seeds[:6]:
+                txt = _html.escape(s["semilla_plantada"][:200])
+                st.markdown(f'<div class="gold-seed">{txt}</div>', unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── FREE — Teaser de upgrade ──────────────────────────
+    elif st.session_state.user_code and st.session_state.user_plan == "free" and st.session_state.turno >= 4:
+        st.markdown(
+            '<div class="gold-upgrade">'
+            '<div class="gold-upgrade-text">'
+            '¿Quieres ver tu evolución completa?<br>'
+            'Declaraciones, semillas y progreso entre sesiones.'
+            '</div>'
+            '<div class="gold-upgrade-cta">ONTOMIND GOLD ◈</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
